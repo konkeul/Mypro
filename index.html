@@ -97,6 +97,24 @@
         text-align: center;
     }
 
+    .status-badge {
+        display: inline-block;
+        font-size: 10px; /* 폰트 크기 축소 */
+        padding: 4px 12px;
+        border-radius: 20px;
+        margin-bottom: 30px; /* 아래 간격 확대 */
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981 !important; /* 초록색 강제 적용 */
+        font-weight: bold;
+        cursor: pointer;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        transition: all 0.2s;
+    }
+
+    .status-badge:hover {
+        background: rgba(16, 185, 129, 0.2);
+    }
+
     .input-group {
         margin-bottom: 24px;
     }
@@ -301,16 +319,15 @@
 </div>
 
 <div id="calc-tab" class="tab-content active">
-<div class="card">
-    <div class="title">🌍 글로벌 환율 계산기</div>
-    <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
-
-    <!-- 실시간 상태 배지 복구 -->
-    <div style="text-align: center;">
-        <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
-    </div>
-
-    <!-- 외화 입력 -->        <div class="input-group">
+    <div class="card">
+        <div class="title">🌍 글로벌 환율 계산기</div>
+        <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
+        
+        <div style="text-align: center;">
+            <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
+        </div>
+        
+        <div class="input-group">
             <div class="label-row">
                 <label>대상 통화 선택</label>
                 <select id="currencySelect">
@@ -342,7 +359,6 @@
             <span style="position: relative; z-index: 2; background: var(--card-bg); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--input-border); color: #00c6ff; font-size: 13px; font-weight: bold;">환산 결과</span>
         </div>
 
-        <!-- 원화 입력 -->
         <div class="input-group">
             <div class="label-row"><label>대한민국 원 (KRW)</label></div>
             <div class="input-wrapper">
@@ -492,25 +508,31 @@
 
         if (source === 'foreign') {
             const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
+            foreignInput.value = formatNumber(unformatNumber(foreignInput.value));
             krwInput.value = formatNumber(Math.round(val * rateToKrw));
         } else if (source === 'krw') {
             const val = parseFloat(unformatNumber(krwInput.value)) || 0;
+            krwInput.value = formatNumber(unformatNumber(krwInput.value));
             foreignInput.value = formatNumber((val / rateToKrw).toFixed(2));
         } else {
-            // 통화 변경 시 초기화
             if (currency === 'JPY') {
                 foreignInput.value = "100";
-                setStep('foreign', 100, document.getElementById('f-step-1')); // 엔화용 단위 제안
                 document.getElementById('f-step-1').innerText = "100";
                 document.getElementById('f-step-2').innerText = "10";
                 document.getElementById('f-step-3').innerText = "1";
+                steps.foreign = 100;
             } else {
                 foreignInput.value = "1";
-                setStep('foreign', 1, document.getElementById('f-step-1'));
                 document.getElementById('f-step-1').innerText = "1";
                 document.getElementById('f-step-2').innerText = "0.1";
                 document.getElementById('f-step-3').innerText = "0.01";
+                steps.foreign = 1;
             }
+            // 버튼 상태 초기화
+            const fBtns = document.getElementsByClassName('foreign-step');
+            for(let b of fBtns) b.classList.remove('active');
+            document.getElementById('f-step-1').classList.add('active');
+            
             krwInput.value = formatNumber(Math.round(parseFloat(unformatNumber(foreignInput.value)) * rateToKrw));
         }
     }
