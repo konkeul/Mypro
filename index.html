@@ -223,93 +223,157 @@
         margin-top: -15px;
         margin-bottom: 15px;
     }
+
+    /* 탭 스타일 추가 */
+    .tab-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .tab-btn {
+        flex: 1;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .tab-btn.active {
+        background: rgba(143, 211, 244, 0.2);
+        color: #8fd3f4;
+        border-color: rgba(143, 211, 244, 0.3);
+    }
+
+    .tab-content {
+        display: none;
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
 </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="title">🌍 글로벌 환율 계산기</div>
-    <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
+<!-- 탭 메뉴 -->
+<div class="tab-container">
+    <button class="tab-btn active" onclick="openTab('calc-tab', this)">💱 계산기</button>
+    <button class="tab-btn" onclick="openTab('contact-tab', this)">🤝 문의</button>
+    <button class="tab-btn" onclick="openTab('comment-tab', this)">💬 댓글</button>
+</div>
 
-    <div style="text-align: center;">
-        <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
-        <div class="refresh-hint">* 글로벌 금융 데이터(Coinbase) 기반의 실시간 환율입니다.</div>
-    </div>
+<!-- 환율 계산기 탭 -->
+<div id="calc-tab" class="tab-content active">
+    <div class="card">
+        <div class="title">🌍 글로벌 환율 계산기</div>
+        <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
 
-    <!-- 외화 입력 -->
-    <div class="input-group">
-        <div class="label-row">
-            <label id="foreignLabel">대상 통화 선택</label>
-            <select id="currencySelect">
-                <option value="USD" selected>미국 달러 (USD)</option>
-                <option value="JPY">일본 엔 (JPY)</option>
-                <option value="EUR">유럽 유로 (EUR)</option>
-                <option value="CNY">중국 위안 (CNY)</option>
-                <option value="GBP">영국 파운드 (GBP)</option>
-            </select>
+        <div style="text-align: center;">
+            <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
+            <div class="refresh-hint">* 글로벌 금융 데이터(Coinbase) 기반의 실시간 환율입니다.</div>
         </div>
-        <div class="input-wrapper">
-            <span class="currency-symbol" id="foreignSymbol">$</span>
-            <input type="number" id="foreignInput" placeholder="0.00" step="0.01">
-            <div class="spin-buttons">
-                <button class="spin-btn" onclick="adjust('foreign', 1)">▲</button>
-                <button class="spin-btn" onclick="adjust('foreign', -1)">▼</button>
+
+        <!-- 외화 입력 -->
+        <div class="input-group">
+            <div class="label-row">
+                <label id="foreignLabel">대상 통화 선택</label>
+                <select id="currencySelect">
+                    <option value="USD" selected>미국 달러 (USD)</option>
+                    <option value="JPY">일본 엔 (JPY)</option>
+                    <option value="EUR">유럽 유로 (EUR)</option>
+                    <option value="CNY">중국 위안 (CNY)</option>
+                    <option value="GBP">영국 파운드 (GBP)</option>
+                </select>
+            </div>
+            <div class="input-wrapper">
+                <span class="currency-symbol" id="foreignSymbol">$</span>
+                <input type="number" id="foreignInput" placeholder="0.00" step="0.01">
+                <div class="spin-buttons">
+                    <button class="spin-btn" onclick="adjust('foreign', 1)">▲</button>
+                    <button class="spin-btn" onclick="adjust('foreign', -1)">▼</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="divider">⇅</div>
+        <div class="divider">⇅</div>
 
-    <!-- 원화 입력 -->
-    <div class="input-group">
-        <div class="label-row">
-            <label>대한민국 원 (KRW)</label>
-        </div>
-        <div class="input-wrapper">
-            <span class="currency-symbol">₩</span>
-            <input type="number" id="krwInput" placeholder="0">
-            <div class="spin-buttons">
-                <button class="spin-btn" onclick="adjust('krw', 1000)">▲</button>
-                <button class="spin-btn" onclick="adjust('krw', -1000)">▼</button>
+        <!-- 원화 입력 -->
+        <div class="input-group">
+            <div class="label-row">
+                <label>대한민국 원 (KRW)</label>
+            </div>
+            <div class="input-wrapper">
+                <span class="currency-symbol">₩</span>
+                <input type="number" id="krwInput" placeholder="0">
+                <div class="spin-buttons">
+                    <button class="spin-btn" onclick="adjust('krw', 1000)">▲</button>
+                    <button class="spin-btn" onclick="adjust('krw', -1000)">▼</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="rate-info">
-        <div class="rate-text" id="currentRateText">환율 정보를 불러오는 중...</div>
-        <div class="update-time" id="lastUpdateTime">업데이트 확인 중</div>
+        <div class="rate-info">
+            <div class="rate-text" id="currentRateText">환율 정보를 불러오는 중...</div>
+            <div class="update-time" id="lastUpdateTime">업데이트 확인 중</div>
+        </div>
     </div>
 </div>
 
-<!-- 제휴 문의 폼 -->
-<div class="card" style="margin-top: 20px;">
-    <div class="title" style="font-size: 20px;">🤝 제휴 문의</div>
-    <div class="desc">서비스 제휴 및 기타 문의사항을 남겨주세요</div>
+<!-- 제휴 문의 탭 -->
+<div id="contact-tab" class="tab-content">
+    <div class="card">
+        <div class="title" style="font-size: 20px;">🤝 제휴 문의</div>
+        <div class="desc">서비스 제휴 및 기타 문의사항을 남겨주세요</div>
 
-    <form action="https://formspree.io/f/xdapzkgo" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
-        <input type="text" name="name" placeholder="성함 또는 업체명" required style="padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: white; outline: none; font-size: 14px; box-sizing: border-box;">
-        <input type="email" name="_replyto" placeholder="이메일 주소" required style="padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: white; outline: none; font-size: 14px; box-sizing: border-box;">
-        <textarea name="message" placeholder="문의 내용" required style="padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: white; height: 100px; resize: none; outline: none; font-size: 14px; font-family: inherit; box-sizing: border-box;"></textarea>
-        <button type="submit" style="margin-top: 5px; width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: bold; color: white; cursor: pointer; background: linear-gradient(90deg, #6a5cff, #00c6ff);">문의 보내기</button>
-    </form>
+        <form action="https://formspree.io/f/xdapzkgo" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
+            <input type="text" name="name" placeholder="성함 또는 업체명" required style="padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: white; outline: none; font-size: 14px; box-sizing: border-box;">
+            <input type="email" name="_replyto" placeholder="이메일 주소" required style="padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: white; outline: none; font-size: 14px; box-sizing: border-box;">
+            <textarea name="message" placeholder="문의 내용" required style="padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: white; height: 100px; resize: none; outline: none; font-size: 14px; font-family: inherit; box-sizing: border-box;"></textarea>
+            <button type="submit" style="margin-top: 5px; width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 15px; font-weight: bold; color: white; cursor: pointer; background: linear-gradient(90deg, #6a5cff, #00c6ff);">문의 보내기</button>
+        </form>
+    </div>
 </div>
 
-<!-- Disqus 댓글 섹션 -->
-<div class="card" style="margin-top: 20px;">
-    <div class="title" style="font-size: 20px; margin-bottom: 20px;">💬 댓글</div>
-    <div id="disqus_thread"></div>
-    <script>
-        (function() { // DON'T EDIT BELOW THIS LINE
-        var d = document, s = d.createElement('script');
-        s.src = 'https://konkeul.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-        })();
-    </script>
-    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<!-- Disqus 댓글 탭 -->
+<div id="comment-tab" class="tab-content">
+    <div class="card">
+        <div class="title" style="font-size: 20px; margin-bottom: 20px;">💬 댓글</div>
+        <div id="disqus_thread"></div>
+        <script>
+            (function() { // DON'T EDIT BELOW THIS LINE
+            var d = document, s = d.createElement('script');
+            s.src = 'https://konkeul.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    </div>
 </div>
 
 <script>
+    // 탭 전환 함수
+    function openTab(tabId, btn) {
+        const contents = document.getElementsByClassName('tab-content');
+        const buttons = document.getElementsByClassName('tab-btn');
+        
+        for (let content of contents) content.classList.remove('active');
+        for (let button of buttons) button.classList.remove('active');
+        
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+    }
+
     const foreignInput = document.getElementById('foreignInput');
     const krwInput = document.getElementById('krwInput');
     const currencySelect = document.getElementById('currencySelect');
