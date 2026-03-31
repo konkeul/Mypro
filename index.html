@@ -179,8 +179,12 @@
             </select>
         </div>
         <div class="input-wrapper">
-            <input type="number" id="foreignInput" placeholder="0.00" step="0.01">
             <span class="currency-symbol" id="foreignSymbol">$</span>
+            <input type="number" id="foreignInput" placeholder="0.00" step="0.01">
+            <div class="spin-buttons">
+                <button class="spin-btn" onclick="adjust('foreign', 1)">▲</button>
+                <button class="spin-btn" onclick="adjust('foreign', -1)">▼</button>
+            </div>
         </div>
     </div>
 
@@ -192,8 +196,12 @@
             <label>대한민국 원 (KRW)</label>
         </div>
         <div class="input-wrapper">
-            <input type="number" id="krwInput" placeholder="0">
             <span class="currency-symbol">₩</span>
+            <input type="number" id="krwInput" placeholder="0">
+            <div class="spin-buttons">
+                <button class="spin-btn" onclick="adjust('krw', 1000)">▲</button>
+                <button class="spin-btn" onclick="adjust('krw', -1000)">▼</button>
+            </div>
         </div>
     </div>
 
@@ -285,6 +293,34 @@
             // 초기값 설정 (선택 변경 시 등)
             if (!foreignInput.value || foreignInput.value === "0" || foreignInput.value === "1" || foreignInput.value === "100") {
                 foreignInput.value = (currency === 'JPY') ? 100 : 1;
+            }
+            const val = parseFloat(foreignInput.value) || 0;
+            krwInput.value = Math.round(val * rateToKrw);
+        }
+    }
+
+    // 이벤트 리스너
+    currencySelect.addEventListener('change', () => updateCalculation());
+    
+    foreignInput.addEventListener('input', () => updateCalculation('foreign'));
+    
+    krwInput.addEventListener('input', () => updateCalculation('krw'));
+
+    // 초기 실행
+    fetchRates();
+</script>
+
+</body>
+</html>
+tListener('input', () => updateCalculation('krw'));
+
+    // 초기 실행
+    fetchRates();
+</script>
+
+</body>
+</html>
+ ? 100 : 1;
             }
             const val = parseFloat(foreignInput.value) || 0;
             krwInput.value = Math.round(val * rateToKrw);
