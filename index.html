@@ -123,6 +123,23 @@
         font-size: 13px;
         outline: none;
         cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    select:hover {
+        background: rgba(143, 211, 244, 0.1);
+    }
+
+    /* 드롭다운 목록 내의 옵션 글자색 해결 */
+    option {
+        background-color: var(--card-bg);
+        color: black; /* 브라우저 기본 드롭다운 가독성을 위해 검정색 우선 지정 */
+    }
+
+    /* 다크 모드일 때의 옵션 색상 재정의 */
+    body:not([data-theme="light"]) option {
+        background-color: #1e2a44;
+        color: white;
     }
 
     .input-wrapper {
