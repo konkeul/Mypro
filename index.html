@@ -345,9 +345,8 @@
             const val = parseFloat(krwInput.value) || 0;
             foreignInput.value = (val / rateToKrw).toFixed(2);
         } else {
-            if (!foreignInput.value || foreignInput.value === "0" || foreignInput.value === "1" || foreignInput.value === "100") {
-                foreignInput.value = (currency === 'JPY') ? 100 : 1;
-            }
+            // 통화 변경 시(source가 없을 때) 항상 초기값으로 리셋
+            foreignInput.value = (currency === 'JPY') ? 100 : 1;
             krwInput.value = Math.round(parseFloat(foreignInput.value) * rateToKrw);
         }
     }
