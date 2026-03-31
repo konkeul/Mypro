@@ -66,7 +66,10 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         z-index: 1000;
         backdrop-filter: blur(5px);
+        transition: all 0.2s;
     }
+
+    .theme-toggle:active { transform: scale(0.95); }
 
     .card {
         width: 100%;
@@ -81,7 +84,7 @@
     }
 
     .title {
-        font-size: 28px; /* 26px에서 확대 */
+        font-size: 28px;
         font-weight: 800;
         margin-bottom: 10px;
         text-align: center;
@@ -91,7 +94,7 @@
     }
 
     .desc {
-        font-size: 15px; /* 14px에서 확대 */
+        font-size: 15px;
         color: var(--text-desc);
         margin-bottom: 25px;
         text-align: center;
@@ -99,7 +102,7 @@
 
     .status-badge {
         display: inline-block;
-        font-size: 12px; /* 10px에서 확대 */
+        font-size: 12px;
         padding: 6px 15px;
         border-radius: 20px;
         margin-bottom: 30px;
@@ -111,80 +114,175 @@
         transition: all 0.2s;
     }
 
-    .status-badge:active {
-        transform: scale(0.95); /* 클릭 시 살짝 작아지는 효과 */
-        background: rgba(16, 185, 129, 0.3);
+    .status-badge:active { transform: scale(0.95); background: rgba(16, 185, 129, 0.2); }
+
+    .input-group {
+        margin-bottom: 24px;
     }
 
-    .label-row label {
-        font-size: 14px; /* 13px에서 확대 */
+    .label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    label {
+        font-size: 14px;
         color: var(--text-desc);
         font-weight: 600;
+    }
+
+    select {
+        background: var(--tab-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-main);
+        padding: 6px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        outline: none;
+        cursor: pointer;
+    }
+
+    option { background-color: #1e2a44; color: white; }
+    body[data-theme="light"] option { background-color: white; color: black; }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .calc-input {
+        width: 100%;
+        padding: 16px 45px;
+        border-radius: 16px;
+        border: 1px solid var(--input-border);
+        background: var(--input-bg);
+        color: var(--text-main);
+        font-size: 22px;
+        font-weight: 600;
+        outline: none;
+        box-sizing: border-box;
+        transition: all 0.3s;
+    }
+
+    .currency-symbol {
+        position: absolute;
+        left: 18px;
+        color: #00c6ff;
+        font-weight: bold;
+        font-size: 18px;
+        pointer-events: none;
+    }
+
+    .spin-buttons {
+        position: absolute;
+        right: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .spin-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: var(--text-desc);
+        width: 24px;
+        height: 22px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.2s;
+    }
+
+    .spin-btn:active { transform: scale(0.9); background: rgba(0, 198, 255, 0.3); }
+
+    .step-btn-container {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+        justify-content: flex-end;
     }
 
     .step-btn {
         background: var(--tab-bg);
         border: 1px solid var(--input-border);
         color: var(--tab-text);
-        padding: 5px 12px; /* 패딩 확대 */
+        padding: 5px 12px;
         border-radius: 8px;
-        font-size: 12px; /* 10px에서 확대 */
+        font-size: 12px;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
-        font-weight: 600;
     }
 
-    .step-btn:active {
-        transform: scale(0.92);
-    }
-
+    .step-btn:active { transform: scale(0.92); }
     .step-btn.active {
         background: #00c6ff;
         color: white;
         border-color: #00c6ff;
-        box-shadow: 0 0 10px rgba(0, 198, 255, 0.4); /* 강조 효과 */
+        box-shadow: 0 0 10px rgba(0, 198, 255, 0.3);
+    }
+
+    .divider-container {
+        text-align: center;
+        position: relative;
+        margin: 10px 0 20px 0;
+    }
+
+    .rate-info {
+        margin-top: 15px;
+        padding: 20px;
+        border-radius: 18px;
+        background: var(--rate-bg);
+        border: 1px solid var(--rate-border);
+        text-align: center;
+    }
+
+    .tab-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+        width: 100%;
+        max-width: 420px;
     }
 
     .tab-btn {
         flex: 1;
-        padding: 12px; /* 10px에서 확대 */
+        padding: 12px;
         border-radius: 12px;
         border: 1px solid var(--input-border);
         background: var(--tab-bg);
         color: var(--tab-text);
-        font-size: 15px; /* 13px에서 확대 */
+        font-size: 15px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
     }
 
-    .tab-btn:active {
-        transform: scale(0.95);
-    }
-
+    .tab-btn:active { transform: scale(0.95); }
     .tab-btn.active {
-        background: rgba(0, 198, 255, 0.25);
+        background: rgba(0, 198, 255, 0.2);
         color: #00c6ff;
         border-color: #00c6ff;
     }
 
+    .tab-content { display: none; width: 100%; max-width: 420px; }
+    .tab-content.active { display: block; }
+
+    .comment-list { display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; }
+    .comment-item { padding: 12px; border-radius: 12px; background: var(--comment-bg); border: 1px solid var(--input-border); }
+
     .main-btn {
-        width: 100%;
-        padding: 16px; /* 14px에서 확대 */
-        border-radius: 12px;
-        border: none;
-        font-size: 16px; /* 폰트 확대 */
-        font-weight: bold;
-        color: white;
-        cursor: pointer;
+        width: 100%; padding: 16px; border-radius: 12px; border: none;
+        font-size: 16px; font-weight: bold; color: white; cursor: pointer;
         background: linear-gradient(90deg, #6a5cff, #00c6ff);
         transition: all 0.2s;
     }
-
-    .main-btn:active {
-        transform: scale(0.98);
-        opacity: 0.9;
-    }
+    .main-btn:active { transform: scale(0.98); opacity: 0.9; }
 </style>
 </head>
 <body>
@@ -203,11 +301,9 @@
     <div class="card">
         <div class="title">🌍 글로벌 환율 계산기</div>
         <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
-        
         <div style="text-align: center;">
             <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
         </div>
-        
         <div class="input-group">
             <div class="label-row">
                 <label>대상 통화 선택</label>
@@ -228,18 +324,16 @@
                 </div>
             </div>
             <div class="step-btn-container">
-                <span style="font-size: 10px; color: var(--text-desc); align-self: center;">조절 단위:</span>
+                <span style="font-size: 11px; color: var(--text-desc); align-self: center;">조절 단위:</span>
                 <button id="f-step-1" class="step-btn foreign-step active" onclick="setStep('foreign', 1, this)">1</button>
                 <button id="f-step-2" class="step-btn foreign-step" onclick="setStep('foreign', 0.1, this)">0.1</button>
                 <button id="f-step-3" class="step-btn foreign-step" onclick="setStep('foreign', 0.01, this)">0.01</button>
             </div>
         </div>
-
         <div class="divider-container">
             <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--input-border); z-index: 1;"></div>
-            <span style="position: relative; z-index: 2; background: var(--card-bg); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--input-border); color: #00c6ff; font-size: 13px; font-weight: bold;">환산 결과</span>
+            <span style="position: relative; z-index: 2; background: var(--card-bg); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--input-border); color: #00c6ff; font-size: 14px; font-weight: bold;">환산 결과</span>
         </div>
-
         <div class="input-group">
             <div class="label-row"><label>대한민국 원 (KRW)</label></div>
             <div class="input-wrapper">
@@ -251,27 +345,26 @@
                 </div>
             </div>
             <div class="step-btn-container">
-                <span style="font-size: 10px; color: var(--text-desc); align-self: center;">조절 단위:</span>
+                <span style="font-size: 11px; color: var(--text-desc); align-self: center;">조절 단위:</span>
                 <button id="k-step-1" class="step-btn krw-step active" onclick="setStep('krw', 1000, this)">1,000</button>
                 <button id="k-step-2" class="step-btn krw-step" onclick="setStep('krw', 100, this)">100</button>
                 <button id="k-step-3" class="step-btn krw-step" onclick="setStep('krw', 10, this)">10</button>
             </div>
         </div>
-
         <div class="rate-info">
-            <div id="currentRateText" style="font-weight: 600; margin-bottom: 5px; font-size: 15px;">환율 정보를 불러오는 중...</div>
-            <div id="lastUpdateTime" style="font-size: 11px; color: var(--text-desc);">업데이트 확인 중</div>
+            <div id="currentRateText" style="font-weight: 600; margin-bottom: 5px; font-size: 16px;">환율 정보를 불러오는 중...</div>
+            <div id="lastUpdateTime" style="font-size: 12px; color: var(--text-desc);">업데이트 확인 중</div>
         </div>
     </div>
 </div>
 
 <div id="contact-tab" class="tab-content">
     <div class="card">
-        <div class="title" style="font-size: 20px;">🤝 제휴 문의</div>
-        <form action="https://formspree.io/f/xdapzkgo" method="POST" style="display: flex; flex-direction: column; gap: 12px;">
-            <input type="text" name="name" placeholder="성함 또는 업체명" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box;">
-            <input type="email" name="_replyto" placeholder="이메일 주소" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box;">
-            <textarea name="message" placeholder="문의 내용" required style="height: 100px; padding: 12px; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); font-family: inherit; outline: none; resize: none;"></textarea>
+        <div class="title" style="font-size: 22px;">🤝 제휴 문의</div>
+        <form action="https://formspree.io/f/xdapzkgo" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="text" name="name" placeholder="성함 또는 업체명" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
+            <input type="email" name="_replyto" placeholder="이메일 주소" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
+            <textarea name="message" placeholder="문의 내용" required style="height: 120px; padding: 14px; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); font-family: inherit; font-size:15px; outline: none; resize: none; box-sizing:border-box;"></textarea>
             <button type="submit" class="main-btn">문의 보내기</button>
         </form>
     </div>
@@ -279,10 +372,10 @@
 
 <div id="comment-tab" class="tab-content">
     <div class="card">
-        <div class="title" style="font-size: 20px; margin-bottom: 10px;">💬 실시간 댓글</div>
-        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
-            <input type="text" id="commentUser" placeholder="닉네임" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box;">
-            <textarea id="commentInput" placeholder="댓글을 입력하세요..." style="height: 80px; padding:12px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); resize:none; box-sizing:border-box;"></textarea>
+        <div class="title" style="font-size: 22px; margin-bottom: 15px;">💬 실시간 댓글</div>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">
+            <input type="text" id="commentUser" placeholder="닉네임" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
+            <textarea id="commentInput" placeholder="댓글을 입력하세요..." style="height: 90px; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); resize:none; box-sizing:border-box; font-size:15px;"></textarea>
             <button onclick="addComment()" class="main-btn">댓글 달기</button>
         </div>
         <div id="commentList" class="comment-list"></div>
@@ -313,9 +406,7 @@
         return parts.join('.');
     }
 
-    function unformatNumber(val) {
-        return val.toString().replace(/,/g, '');
-    }
+    function unformatNumber(val) { return val.toString().replace(/,/g, ''); }
 
     function setStep(type, val, btn) {
         steps[type] = val;
@@ -353,7 +444,6 @@
         const currentVal = parseFloat(unformatNumber(input.value)) || 0;
         const amount = steps[type] * direction;
         const newVal = Math.max(0, currentVal + amount);
-        
         if (type === 'foreign') {
             const precision = steps.foreign < 1 ? (steps.foreign === 0.01 ? 2 : 1) : 2;
             input.value = formatNumber(newVal.toFixed(precision));
@@ -381,7 +471,6 @@
         if (!rates[currency]) return;
         const rateToKrw = rates[currency];
         foreignSymbol.innerText = symbols[currency];
-        
         let displayRate = rateToKrw;
         let prefix = "1";
         if (currency === 'JPY') { displayRate = rateToKrw * 100; prefix = "100"; }
@@ -389,11 +478,9 @@
 
         if (source === 'foreign') {
             const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
-            foreignInput.value = formatNumber(unformatNumber(foreignInput.value));
             krwInput.value = formatNumber(Math.round(val * rateToKrw));
         } else if (source === 'krw') {
             const val = parseFloat(unformatNumber(krwInput.value)) || 0;
-            krwInput.value = formatNumber(unformatNumber(krwInput.value));
             foreignInput.value = formatNumber((val / rateToKrw).toFixed(2));
         } else {
             if (currency === 'JPY') {
@@ -409,11 +496,9 @@
                 document.getElementById('f-step-3').innerText = "0.01";
                 steps.foreign = 1;
             }
-            // 버튼 상태 초기화
             const fBtns = document.getElementsByClassName('foreign-step');
             for(let b of fBtns) b.classList.remove('active');
             document.getElementById('f-step-1').classList.add('active');
-            
             krwInput.value = formatNumber(Math.round(parseFloat(unformatNumber(foreignInput.value)) * rateToKrw));
         }
     }
@@ -424,7 +509,7 @@
         const list = document.getElementById('commentList');
         list.innerHTML = '';
         if (data.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-desc); font-size:13px; margin-top:20px;">첫 댓글을 남겨보세요!</div>';
+            list.innerHTML = '<div style="text-align:center; color:var(--text-desc); font-size:14px; margin-top:20px;">첫 댓글을 남겨보세요!</div>';
             return;
         }
         data.forEach(c => {
@@ -432,7 +517,7 @@
             const item = document.createElement('div');
             item.className = 'comment-item';
             item.style.marginBottom = '10px';
-            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:bold; color:#00c6ff;">${c.user}</span><span style="font-size:11px; color:var(--text-desc);">${date}</span></div><div style="font-size:14px; line-height:1.5;">${c.text}</div>`;
+            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:bold; color:#00c6ff;">${c.user}</span><span style="font-size:11px; color:var(--text-desc);">${date}</span></div><div style="font-size:15px; line-height:1.5;">${c.text}</div>`;
             list.appendChild(item);
         });
     }
