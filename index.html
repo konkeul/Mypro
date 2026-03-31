@@ -5,43 +5,79 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>글로벌 실시간 환율 계산기</title>
 <style>
+    :root {
+        /* 다크 모드 (기본값) */
+        --bg-gradient: radial-gradient(circle at top left, #1a1a2e, #16213e);
+        --card-bg: rgba(255, 255, 255, 0.05);
+        --text-main: white;
+        --text-desc: #94a3b8;
+        --input-bg: rgba(0, 0, 0, 0.3);
+        --input-border: rgba(255, 255, 255, 0.1);
+        --tab-bg: rgba(255, 255, 255, 0.05);
+        --tab-text: #94a3b8;
+        --rate-bg: rgba(143, 211, 244, 0.05);
+        --rate-border: rgba(143, 211, 244, 0.1);
+    }
+
+    [data-theme="light"] {
+        /* 라이트 모드 */
+        --bg-gradient: radial-gradient(circle at top left, #f8fafc, #e2e8f0);
+        --card-bg: white;
+        --text-main: #1e293b;
+        --text-desc: #64748b;
+        --input-bg: #f1f5f9;
+        --input-border: #cbd5e1;
+        --tab-bg: #e2e8f0;
+        --tab-text: #64748b;
+        --rate-bg: #f0f9ff;
+        --rate-border: #bae6fd;
+    }
+
     body {
         margin: 0;
-        min-height: 100vh; /* height를 min-height로 변경하여 스크롤 허용 */
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        background: radial-gradient(circle at top left, #1a1a2e, #16213e);
+        background: var(--bg-gradient);
         font-family: 'Segoe UI', system-ui, sans-serif;
-        color: white;
-        padding: 20px; /* 모바일 여백 추가 */
+        color: var(--text-main);
+        padding: 20px;
         box-sizing: border-box;
+        transition: background 0.3s, color 0.3s;
+    }
+
+    /* 테마 토글 버튼 스타일 */
+    .theme-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: var(--card-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-main);
+        padding: 8px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1000;
+        transition: all 0.3s;
     }
 
     .card {
-        width: 100%; /* 너비를 100%로 설정 */
-        max-width: 420px; /* 최대 너비 제한 */
+        width: 100%;
+        max-width: 420px;
         padding: 30px;
         border-radius: 28px;
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--card-bg);
         backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.4);
-        box-sizing: border-box; /* 패딩 포함 너비 계산 */
-    }
-
-    @media (max-width: 400px) {
-        .card {
-            padding: 20px; /* 작은 화면에서 패딩 축소 */
-        }
-        .title {
-            font-size: 22px; /* 제목 크기 축소 */
-        }
-        input {
-            font-size: 18px; /* 입력창 폰트 축소 */
-            padding: 14px 40px 14px 40px;
-        }
+        border: 1px solid var(--input-border);
+        box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+        box-sizing: border-box;
     }
 
     .title {
@@ -49,221 +85,93 @@
         font-weight: 800;
         margin-bottom: 8px;
         text-align: center;
-        background: linear-gradient(90deg, #84fab0 0%, #8fd3f4 100%);
+        background: linear-gradient(90deg, #6a5cff, #00c6ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    [data-theme="light"] .title {
+        background: linear-gradient(90deg, #4f46e5, #0ea5e9);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
     .desc {
         font-size: 14px;
-        color: #94a3b8;
+        color: var(--text-desc);
         margin-bottom: 30px;
         text-align: center;
     }
 
-    .input-group {
-        margin-bottom: 24px;
-    }
-
-    .label-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-
     label {
         font-size: 13px;
-        color: #94a3b8;
+        color: var(--text-desc);
         font-weight: 600;
     }
 
     select {
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
+        background: var(--tab-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-main);
         padding: 6px 10px;
         border-radius: 10px;
         font-size: 13px;
         outline: none;
         cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    select:hover {
-        background: rgba(255, 255, 255, 0.25);
-    }
-
-    option {
-        background-color: #1e2a44;
-        color: white;
-    }
-
-    .input-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
     }
 
     input {
         width: 100%;
-        padding: 16px 45px 16px 45px; /* 양옆 공간 확보 */
+        padding: 16px 45px 16px 45px;
         border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(0, 0, 0, 0.3);
-        color: white;
+        border: 1px solid var(--input-border);
+        background: var(--input-bg);
+        color: var(--text-main);
         font-size: 20px;
         font-weight: 600;
         outline: none;
-        transition: all 0.3s;
         box-sizing: border-box;
-        -moz-appearance: textfield; /* 파이어폭스 기본 화살표 제거 */
-    }
-
-    /* 크롬, 사파리 등 기본 화살표 제거 */
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    input:focus {
-        border-color: #8fd3f4;
-        box-shadow: 0 0 15px rgba(143, 211, 244, 0.2);
-    }
-
-    .currency-symbol {
-        position: absolute;
-        left: 18px;
-        color: #8fd3f4;
-        font-weight: bold;
-        font-size: 18px;
-        pointer-events: none;
-    }
-
-    .spin-buttons {
-        position: absolute;
-        right: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .spin-btn {
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
-        color: #94a3b8;
-        width: 24px;
-        height: 20px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 10px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.2s;
-    }
-
-    .spin-btn:hover {
-        background: rgba(143, 211, 244, 0.3);
-        color: white;
-    }
-
-    .divider {
-        text-align: center;
-        margin: -10px 0 15px 0;
-        color: #8fd3f4;
-        font-size: 24px;
-        opacity: 0.7;
-    }
-
-    .rate-info {
-        margin-top: 10px;
-        padding: 20px;
-        border-radius: 18px;
-        background: rgba(143, 211, 244, 0.05);
-        border: 1px solid rgba(143, 211, 244, 0.1);
-        text-align: center;
-    }
-
-    .rate-text {
-        font-size: 16px;
-        font-weight: 600;
-        color: #f1f5f9;
-        margin-bottom: 6px;
-    }
-
-    .update-time {
-        font-size: 11px;
-        color: #64748b;
-    }
-
-    .status-badge {
-        display: inline-block;
-        font-size: 11px;
-        padding: 4px 12px;
-        border-radius: 20px;
-        margin-bottom: 20px;
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid transparent;
-    }
-
-    .status-badge:hover {
-        background: rgba(16, 185, 129, 0.2);
-        border-color: rgba(16, 185, 129, 0.3);
-    }
-
-    .refresh-hint {
-        font-size: 10px;
-        color: #64748b;
-        margin-top: -15px;
-        margin-bottom: 15px;
-    }
-
-    /* 탭 스타일 추가 */
-    .tab-container {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        width: 100%;
-        max-width: 420px;
     }
 
     .tab-btn {
         flex: 1;
         padding: 10px;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: rgba(255, 255, 255, 0.05);
-        color: #94a3b8;
+        border: 1px solid var(--input-border);
+        background: var(--tab-bg);
+        color: var(--tab-text);
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.3s;
     }
 
-    .tab-btn.active {
-        background: rgba(143, 211, 244, 0.2);
-        color: #8fd3f4;
-        border-color: rgba(143, 211, 244, 0.3);
+    .rate-info {
+        margin-top: 10px;
+        padding: 20px;
+        border-radius: 18px;
+        background: var(--rate-bg);
+        border: 1px solid var(--rate-border);
+        text-align: center;
     }
 
-    .tab-content {
-        display: none;
-        width: 100%;
-        max-width: 420px;
+    .rate-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 6px;
     }
 
-    .tab-content.active {
-        display: block;
+    /* Disqus 다크 모드 최적화 지원 */
+    #disqus_thread {
+        color: var(--text-main);
     }
 </style>
 </head>
 <body>
+
+<button class="theme-toggle" onclick="toggleTheme()">
+    <span id="theme-icon">🌙</span> <span id="theme-text">다크 모드</span>
+</button>
 
 <!-- 탭 메뉴 -->
 <div class="tab-container">
@@ -394,6 +302,81 @@
     // 숫자 조절 함수
     function adjust(type, amount) {
         const input = (type === 'foreign') ? foreignInput : krwInput;
+        const currentVal = parseFloat(input.value) || 0;
+        const newVal = Math.max(0, currentVal + amount);
+        input.value = (type === 'foreign') ? newVal.toFixed(2) : Math.round(newVal);
+        updateCalculation(type);
+    }
+
+    // 환율 정보 가져오기
+    async function fetchRates() {
+        statusBadge.innerText = '● 최신 정보를 가져오는 중...';
+        try {
+            const response = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=KRW');
+            const data = await response.json();
+            
+            if (data && data.data && data.data.rates) {
+                const r = data.data.rates;
+                rates = {
+                    'USD': 1 / parseFloat(r.USD),
+                    'JPY': 1 / parseFloat(r.JPY),
+                    'EUR': 1 / parseFloat(r.EUR),
+                    'CNY': 1 / parseFloat(r.CNY),
+                    'GBP': 1 / parseFloat(r.GBP)
+                };
+                
+                const now = new Date();
+                statusBadge.innerText = '● 실시간 환율 연결됨 (클릭하여 갱신)';
+                lastUpdateTime.innerText = `마지막 확인: ${now.toLocaleTimeString()} (실시간 데이터)`;
+                updateCalculation();
+            } else {
+                throw new Error('데이터 구조 오류');
+            }
+        } catch (error) {
+            console.error('환율 로드 오류:', error);
+            statusBadge.innerText = '● 연결 오류 (재시도 클릭)';
+        }
+    }
+
+    function updateCalculation(source) {
+        if (Object.keys(rates).length === 0) return;
+        
+        const currency = currencySelect.value;
+        const rateToKrw = rates[currency];
+        
+        foreignSymbol.innerText = symbols[currency];
+        
+        let displayRate = rateToKrw;
+        let prefix = "1";
+        if (currency === 'JPY') {
+            displayRate = rateToKrw * 100;
+            prefix = "100";
+        }
+        
+        currentRateText.innerText = `현재 환율: ${prefix} ${currency} = ${displayRate.toLocaleString('ko-KR', {maximumFractionDigits: 2})} KRW`;
+
+        if (source === 'foreign') {
+            const val = parseFloat(foreignInput.value) || 0;
+            krwInput.value = Math.round(val * rateToKrw);
+        } else if (source === 'krw') {
+            const val = parseFloat(krwInput.value) || 0;
+            foreignInput.value = (val / rateToKrw).toFixed(2);
+        } else {
+            // 통화 변경 시(source가 없을 때) 항상 초기값으로 리셋
+            foreignInput.value = (currency === 'JPY') ? 100 : 1;
+            krwInput.value = Math.round(parseFloat(foreignInput.value) * rateToKrw);
+        }
+    }
+
+    currencySelect.addEventListener('change', () => updateCalculation());
+    foreignInput.addEventListener('input', () => updateCalculation('foreign'));
+    krwInput.addEventListener('input', () => updateCalculation('krw'));
+
+    fetchRates();
+</script>
+
+</body>
+</html>
         const currentVal = parseFloat(input.value) || 0;
         const newVal = Math.max(0, currentVal + amount);
         input.value = (type === 'foreign') ? newVal.toFixed(2) : Math.round(newVal);
