@@ -49,23 +49,23 @@
         transition: background 0.3s, color 0.3s;
     }
 
+    /* 테마 전환 버튼 위치 수정: 화면 맨 위 구석으로 */
     .theme-toggle {
-        position: fixed;
-        top: 20px;
-        right: 20px;
+        position: absolute;
+        top: 15px;
+        right: 15px;
         background: var(--card-bg);
         border: 1px solid var(--input-border);
         color: var(--text-main);
-        padding: 8px 12px;
+        padding: 6px 12px;
         border-radius: 20px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 12px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        gap: 6px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         z-index: 1000;
-        backdrop-filter: blur(5px);
         transition: all 0.2s;
     }
 
@@ -116,22 +116,9 @@
 
     .status-badge:active { transform: scale(0.95); background: rgba(16, 185, 129, 0.2); }
 
-    .input-group {
-        margin-bottom: 24px;
-    }
-
-    .label-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-
-    label {
-        font-size: 14px;
-        color: var(--text-desc);
-        font-weight: 600;
-    }
+    .input-group { margin-bottom: 24px; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    label { font-size: 14px; color: var(--text-desc); font-weight: 600; }
 
     select {
         background: var(--tab-bg);
@@ -147,11 +134,7 @@
     option { background-color: #1e2a44; color: white; }
     body[data-theme="light"] option { background-color: white; color: black; }
 
-    .input-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
 
     .calc-input {
         width: 100%;
@@ -242,6 +225,17 @@
         text-align: center;
     }
 
+    /* 업데이트 강조 애니메이션 */
+    @keyframes update-pop {
+        0% { transform: scale(1); color: var(--text-main); }
+        50% { transform: scale(1.1); color: #00c6ff; font-weight: bold; }
+        100% { transform: scale(1); color: var(--text-desc); }
+    }
+
+    .update-anim {
+        animation: update-pop 0.6s ease-out;
+    }
+
     .tab-container {
         display: flex;
         gap: 10px;
@@ -287,16 +281,15 @@
 </head>
 <body>
 
-<div style="width: 100%; max-width: 420px; display: flex; flex-direction: column;">
-    <button class="theme-toggle" onclick="toggleTheme()">
-        <span id="theme-icon">🌙</span> <span id="theme-text">다크 모드</span>
-    </button>
+<!-- 테마 전환 버튼: 상단 고정 (스크롤 시 사라짐) -->
+<button class="theme-toggle" onclick="toggleTheme()">
+    <span id="theme-icon">🌙</span> <span id="theme-text">다크 모드</span>
+</button>
 
-    <div class="tab-container">
-        <button class="tab-btn active" onclick="openTab('calc-tab', this)">💱 계산기</button>
-        <button class="tab-btn" onclick="openTab('contact-tab', this)">🤝 문의</button>
-        <button class="tab-btn" onclick="openTab('comment-tab', this)">💬 댓글</button>
-    </div>
+<div class="tab-container">
+    <button class="tab-btn active" onclick="openTab('calc-tab', this)">💱 계산기</button>
+    <button class="tab-btn" onclick="openTab('contact-tab', this)">🤝 문의</button>
+    <button class="tab-btn" onclick="openTab('comment-tab', this)">💬 댓글</button>
 </div>
 
 <div id="calc-tab" class="tab-content active">
@@ -464,12 +457,10 @@
                 const r = data.data.rates;
                 rates = {'USD': 1/r.USD, 'JPY': 1/r.JPY, 'EUR': 1/r.EUR, 'CNY': 1/r.CNY, 'GBP': 1/r.GBP};
                 timeEl.innerText = `마지막 확인: ${new Date().toLocaleTimeString()} (실시간)`;
-                
-                // 애니메이션 효과 적용
-                timeEl.classList.remove('update-anim');
-                void timeEl.offsetWidth; // 브라우저 리플로우 강제 유도 (애니메이션 재시작을 위해)
-                timeEl.classList.add('update-anim');
-                
+                timeEl.style.animation = 'none';
+                void timeEl.offsetHeight;
+                timeEl.style.animation = null;
+                timeEl.classList.add('update-pop');
                 updateCalculation();
             }
         } catch (e) { currentRateText.innerText = '환율 로드 오류'; }
@@ -526,7 +517,7 @@
             const item = document.createElement('div');
             item.className = 'comment-item';
             item.style.marginBottom = '10px';
-            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:bold; color:#00c6ff;">${c.user}</span><span style="font-size:11px; color:var(--text-desc);">${date}</span></div><div style="font-size:15px; line-height:1.5;">${c.text}</div>`;
+            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:bold; color:#00c6ff;">${c.user}</span><span style="font-size:11px; color:var(--text-desc);">${date}</span></div><div style="font-size:14px; line-height:1.5;">${c.text}</div>`;
             list.appendChild(item);
         });
     }
