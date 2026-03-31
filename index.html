@@ -81,9 +81,9 @@
     }
 
     .title {
-        font-size: 26px;
+        font-size: 28px; /* 26px에서 확대 */
         font-weight: 800;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         text-align: center;
         background: linear-gradient(90deg, #6a5cff, #00c6ff);
         -webkit-background-clip: text;
@@ -91,7 +91,7 @@
     }
 
     .desc {
-        font-size: 14px;
+        font-size: 15px; /* 14px에서 확대 */
         color: var(--text-desc);
         margin-bottom: 25px;
         text-align: center;
@@ -99,210 +99,91 @@
 
     .status-badge {
         display: inline-block;
-        font-size: 10px; /* 폰트 크기 축소 */
-        padding: 4px 12px;
+        font-size: 12px; /* 10px에서 확대 */
+        padding: 6px 15px;
         border-radius: 20px;
-        margin-bottom: 30px; /* 아래 간격 확대 */
+        margin-bottom: 30px;
         background: rgba(16, 185, 129, 0.1);
-        color: #10b981 !important; /* 초록색 강제 적용 */
+        color: #10b981 !important;
         font-weight: bold;
         cursor: pointer;
         border: 1px solid rgba(16, 185, 129, 0.2);
         transition: all 0.2s;
     }
 
-    .status-badge:hover {
-        background: rgba(16, 185, 129, 0.2);
+    .status-badge:active {
+        transform: scale(0.95); /* 클릭 시 살짝 작아지는 효과 */
+        background: rgba(16, 185, 129, 0.3);
     }
 
-    .input-group {
-        margin-bottom: 24px;
-    }
-
-    .label-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-
-    label {
-        font-size: 13px;
+    .label-row label {
+        font-size: 14px; /* 13px에서 확대 */
         color: var(--text-desc);
         font-weight: 600;
-    }
-
-    select {
-        background: var(--tab-bg);
-        border: 1px solid var(--input-border);
-        color: var(--text-main);
-        padding: 6px 10px;
-        border-radius: 10px;
-        font-size: 13px;
-        outline: none;
-        cursor: pointer;
-    }
-
-    option {
-        background-color: #1e2a44;
-        color: white;
-    }
-
-    body[data-theme="light"] option {
-        background-color: white;
-        color: black;
-    }
-
-    .input-wrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-    }
-
-    .calc-input {
-        width: 100%;
-        padding: 16px 45px;
-        border-radius: 16px;
-        border: 1px solid var(--input-border);
-        background: var(--input-bg);
-        color: var(--text-main);
-        font-size: 20px;
-        font-weight: 600;
-        outline: none;
-        box-sizing: border-box;
-        transition: all 0.3s;
-    }
-
-    .currency-symbol {
-        position: absolute;
-        left: 18px;
-        color: #00c6ff;
-        font-weight: bold;
-        font-size: 18px;
-        pointer-events: none;
-    }
-
-    .spin-buttons {
-        position: absolute;
-        right: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .spin-btn {
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
-        color: var(--text-desc);
-        width: 24px;
-        height: 20px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 10px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .step-btn-container {
-        display: flex;
-        gap: 5px;
-        margin-top: 8px;
-        justify-content: flex-end;
     }
 
     .step-btn {
         background: var(--tab-bg);
         border: 1px solid var(--input-border);
         color: var(--tab-text);
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 10px;
+        padding: 5px 12px; /* 패딩 확대 */
+        border-radius: 8px;
+        font-size: 12px; /* 10px에서 확대 */
         cursor: pointer;
         transition: all 0.2s;
+        font-weight: 600;
+    }
+
+    .step-btn:active {
+        transform: scale(0.92);
     }
 
     .step-btn.active {
         background: #00c6ff;
         color: white;
         border-color: #00c6ff;
-    }
-
-    .divider-container {
-        text-align: center;
-        position: relative;
-        margin: 5px 0 15px 0;
-    }
-
-    .rate-info {
-        margin-top: 10px;
-        padding: 20px;
-        border-radius: 18px;
-        background: var(--rate-bg);
-        border: 1px solid var(--rate-border);
-        text-align: center;
-    }
-
-    .tab-container {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        width: 100%;
-        max-width: 420px;
+        box-shadow: 0 0 10px rgba(0, 198, 255, 0.4); /* 강조 효과 */
     }
 
     .tab-btn {
         flex: 1;
-        padding: 10px;
+        padding: 12px; /* 10px에서 확대 */
         border-radius: 12px;
         border: 1px solid var(--input-border);
         background: var(--tab-bg);
         color: var(--tab-text);
-        font-size: 13px;
+        font-size: 15px; /* 13px에서 확대 */
         font-weight: 600;
         cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:active {
+        transform: scale(0.95);
     }
 
     .tab-btn.active {
-        background: rgba(0, 198, 255, 0.2);
+        background: rgba(0, 198, 255, 0.25);
         color: #00c6ff;
-        border-color: rgba(0, 198, 255, 0.3);
-    }
-
-    .tab-content {
-        display: none;
-        width: 100%;
-        max-width: 420px;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    .comment-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        max-height: 350px;
-        overflow-y: auto;
-    }
-
-    .comment-item {
-        padding: 12px;
-        border-radius: 12px;
-        background: var(--comment-bg);
-        border: 1px solid var(--input-border);
+        border-color: #00c6ff;
     }
 
     .main-btn {
         width: 100%;
-        padding: 14px;
+        padding: 16px; /* 14px에서 확대 */
         border-radius: 12px;
         border: none;
+        font-size: 16px; /* 폰트 확대 */
         font-weight: bold;
         color: white;
         cursor: pointer;
         background: linear-gradient(90deg, #6a5cff, #00c6ff);
+        transition: all 0.2s;
+    }
+
+    .main-btn:active {
+        transform: scale(0.98);
+        opacity: 0.9;
     }
 </style>
 </head>
