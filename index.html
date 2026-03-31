@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>글로벌 실시간 환율 계산기</title>
+<!-- Supabase 라이브러리 추가 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
     :root {
         /* 다크 모드 (기본값) */
@@ -261,7 +263,7 @@
         display: block;
     }
 
-    /* 자체 댓글 스타일 */
+    /* 댓글 스타일 */
     .comment-form {
         display: flex;
         flex-direction: column;
@@ -273,7 +275,7 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        max-height: 300px;
+        max-height: 350px;
         overflow-y: auto;
         padding-right: 5px;
     }
@@ -283,6 +285,12 @@
         border-radius: 12px;
         background: var(--comment-bg);
         border: 1px solid var(--input-border);
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .comment-header {
@@ -305,6 +313,7 @@
     .comment-text {
         font-size: 14px;
         line-height: 1.5;
+        word-break: break-all;
     }
 
     .main-btn {
@@ -320,6 +329,17 @@
 
     .main-btn:active {
         opacity: 0.8;
+    }
+
+    .setup-notice {
+        font-size: 12px;
+        color: #ff6b6b;
+        background: rgba(255, 107, 107, 0.1);
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        text-align: center;
+        display: none;
     }
 </style>
 </head>
@@ -395,22 +415,38 @@
 
 <div id="comment-tab" class="tab-content">
     <div class="card">
-        <div class="title" style="font-size: 20px; margin-bottom: 10px;">💬 댓글 한마디</div>
-        <div class="desc" style="margin-bottom: 15px;">여러분의 의견을 자유롭게 남겨주세요</div>
+        <div class="title" style="font-size: 20px; margin-bottom: 10px;">💬 실시간 댓글</div>
+        <div class="desc" style="margin-bottom: 15px;">전 세계 방문자와 실시간으로 소통하세요</div>
+        
+        <div id="setupNotice" class="setup-notice">
+            ⚠️ 데이터베이스 연결이 필요합니다. (코드를 확인해 주세요)
+        </div>
         
         <div class="comment-form">
-            <input type="text" id="commentUser" placeholder="닉네임" maxlength="10">
+            <input type="text" id="commentUser" placeholder="닉네임 (최대 10자)" maxlength="10">
             <textarea id="commentInput" placeholder="댓글을 입력하세요..." maxlength="100" style="height: 80px;"></textarea>
-            <button onclick="addComment()" class="main-btn">댓글 달기</button>
+            <button id="addCommentBtn" onclick="addComment()" class="main-btn">댓글 달기</button>
         </div>
         
         <div id="commentList" class="comment-list">
-            <!-- 댓글이 여기에 표시됩니다 -->
+            <div style="text-align:center; color:var(--text-desc); font-size:13px; margin-top:20px;">불러오는 중...</div>
         </div>
     </div>
 </div>
 
 <script>
+    // --- 설정 정보 (이 부분을 본인의 키로 바꿔주세요!) ---
+    const SB_URL = 'YOUR_SUPABASE_URL';
+    const SB_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    // ------------------------------------------------
+
+    let _supabase = null;
+    if (SB_URL !== 'YOUR_SUPABASE_URL') {
+        _supabase = supabase.createClient(SB_URL, SB_KEY);
+    } else {
+        document.getElementById('setupNotice').style.display = 'block';
+    }
+
     const foreignInput = document.getElementById('foreignInput');
     const krwInput = document.getElementById('krwInput');
     const currencySelect = document.getElementById('currencySelect');
@@ -474,7 +510,6 @@
         const currency = currencySelect.value;
         const rateToKrw = rates[currency];
         foreignSymbol.innerText = symbols[currency];
-        
         let displayRate = rateToKrw;
         let prefix = "1";
         if (currency === 'JPY') { displayRate = rateToKrw * 100; prefix = "100"; }
@@ -490,9 +525,28 @@
         }
     }
 
-    // 자체 댓글 로직
-    function loadComments() {
-        const comments = JSON.parse(localStorage.getItem('my_comments') || '[]');
+    // --- 실시간 댓글 로직 (Supabase) ---
+    async function loadComments() {
+        if (!_supabase) {
+            document.getElementById('commentList').innerHTML = '<div style="text-align:center; color:var(--text-desc); font-size:13px; margin-top:20px;">설정 대기 중입니다.</div>';
+            return;
+        }
+
+        const { data, error } = await _supabase
+            .from('comments')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (error) {
+            console.error('불러오기 실패:', error);
+            return;
+        }
+
+        renderComments(data);
+    }
+
+    function renderComments(comments) {
         const list = document.getElementById('commentList');
         list.innerHTML = '';
         
@@ -501,13 +555,14 @@
             return;
         }
 
-        comments.reverse().forEach(c => {
+        comments.forEach(c => {
+            const date = new Date(c.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const item = document.createElement('div');
             item.className = 'comment-item';
             item.innerHTML = `
                 <div class="comment-header">
                     <span class="comment-user">${c.user}</span>
-                    <span class="comment-date">${c.date}</span>
+                    <span class="comment-date">${date}</span>
                 </div>
                 <div class="comment-text">${c.text}</div>
             `;
@@ -515,24 +570,42 @@
         });
     }
 
-    function addComment() {
+    async function addComment() {
+        if (!_supabase) return alert('데이터베이스 설정이 필요합니다.');
+        
         const user = document.getElementById('commentUser').value.trim() || '익명';
         const text = document.getElementById('commentInput').value.trim();
+        const btn = document.getElementById('addCommentBtn');
         
         if (!text) return alert('내용을 입력해주세요!');
         
-        const comments = JSON.parse(localStorage.getItem('my_comments') || '[]');
-        const newComment = {
-            user: user,
-            text: text,
-            date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        };
+        btn.disabled = true;
+        btn.innerText = '보내는 중...';
+
+        const { error } = await _supabase
+            .from('comments')
+            .insert([{ user: user, text: text }]);
         
-        comments.push(newComment);
-        localStorage.setItem('my_comments', JSON.stringify(comments));
+        if (error) {
+            alert('오류가 발생했습니다: ' + error.message);
+        } else {
+            document.getElementById('commentInput').value = '';
+        }
         
-        document.getElementById('commentInput').value = '';
-        loadComments();
+        btn.disabled = false;
+        btn.innerText = '댓글 달기';
+    }
+
+    // 실시간 구독 설정
+    function subscribeComments() {
+        if (!_supabase) return;
+        
+        _supabase
+            .channel('public:comments')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, (payload) => {
+                loadComments(); // 새 댓글이 오면 다시 불러오기
+            })
+            .subscribe();
     }
 
     currencySelect.addEventListener('change', () => updateCalculation());
@@ -547,6 +620,7 @@
         }
         fetchRates();
         loadComments();
+        subscribeComments();
     };
 </script>
 </body>
