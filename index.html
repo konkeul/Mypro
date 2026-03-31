@@ -7,7 +7,7 @@
 <style>
     body {
         margin: 0;
-        height: 100vh;
+        min-height: 100vh; /* height를 min-height로 변경하여 스크롤 허용 */
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -15,16 +15,33 @@
         background: radial-gradient(circle at top left, #1a1a2e, #16213e);
         font-family: 'Segoe UI', system-ui, sans-serif;
         color: white;
+        padding: 20px; /* 모바일 여백 추가 */
+        box-sizing: border-box;
     }
 
     .card {
-        width: 420px;
+        width: 100%; /* 너비를 100%로 설정 */
+        max-width: 420px; /* 최대 너비 제한 */
         padding: 30px;
         border-radius: 28px;
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(15px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+        box-sizing: border-box; /* 패딩 포함 너비 계산 */
+    }
+
+    @media (max-width: 400px) {
+        .card {
+            padding: 20px; /* 작은 화면에서 패딩 축소 */
+        }
+        .title {
+            font-size: 22px; /* 제목 크기 축소 */
+        }
+        input {
+            font-size: 18px; /* 입력창 폰트 축소 */
+            padding: 14px 40px 14px 40px;
+        }
     }
 
     .title {
