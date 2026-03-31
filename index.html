@@ -17,6 +17,7 @@
         --tab-text: #94a3b8;
         --rate-bg: rgba(143, 211, 244, 0.05);
         --rate-border: rgba(143, 211, 244, 0.1);
+        --comment-bg: rgba(0, 0, 0, 0.2);
     }
 
     [data-theme="light"] {
@@ -31,6 +32,7 @@
         --tab-text: #64748b;
         --rate-bg: #f0f9ff;
         --rate-border: #bae6fd;
+        --comment-bg: #f8fafc;
     }
 
     body {
@@ -137,18 +139,23 @@
         align-items: center;
     }
 
-    input {
+    input, textarea {
         width: 100%;
-        padding: 16px 45px;
-        border-radius: 16px;
+        padding: 14px 16px;
+        border-radius: 12px;
         border: 1px solid var(--input-border);
         background: var(--input-bg);
         color: var(--text-main);
-        font-size: 20px;
-        font-weight: 600;
+        font-size: 16px;
         outline: none;
         box-sizing: border-box;
         transition: all 0.3s;
+    }
+
+    input[type="number"] {
+        padding: 16px 45px;
+        font-size: 20px;
+        font-weight: 600;
         -moz-appearance: textfield;
     }
 
@@ -253,6 +260,67 @@
     .tab-content.active {
         display: block;
     }
+
+    /* 자체 댓글 스타일 */
+    .comment-form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .comment-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    .comment-item {
+        padding: 12px;
+        border-radius: 12px;
+        background: var(--comment-bg);
+        border: 1px solid var(--input-border);
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+
+    .comment-user {
+        font-weight: bold;
+        font-size: 14px;
+        color: #00c6ff;
+    }
+
+    .comment-date {
+        font-size: 11px;
+        color: var(--text-desc);
+    }
+
+    .comment-text {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .main-btn {
+        padding: 14px;
+        border-radius: 12px;
+        border: none;
+        font-weight: bold;
+        color: white;
+        cursor: pointer;
+        background: linear-gradient(90deg, #6a5cff, #00c6ff);
+        transition: opacity 0.2s;
+    }
+
+    .main-btn:active {
+        opacity: 0.8;
+    }
 </style>
 </head>
 <body>
@@ -320,15 +388,25 @@
             <input type="text" name="name" placeholder="성함 또는 업체명" required>
             <input type="email" name="_replyto" placeholder="이메일 주소" required>
             <textarea name="message" placeholder="문의 내용" required style="height: 100px; padding: 12px; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); font-family: inherit; outline: none; resize: none;"></textarea>
-            <button type="submit" style="padding: 14px; border-radius: 12px; border: none; font-weight: bold; color: white; cursor: pointer; background: linear-gradient(90deg, #6a5cff, #00c6ff);">문의 보내기</button>
+            <button type="submit" class="main-btn">문의 보내기</button>
         </form>
     </div>
 </div>
 
 <div id="comment-tab" class="tab-content">
     <div class="card">
-        <div class="title" style="font-size: 20px; margin-bottom: 20px;">💬 댓글</div>
-        <div id="disqus_thread"></div>
+        <div class="title" style="font-size: 20px; margin-bottom: 10px;">💬 댓글 한마디</div>
+        <div class="desc" style="margin-bottom: 15px;">여러분의 의견을 자유롭게 남겨주세요</div>
+        
+        <div class="comment-form">
+            <input type="text" id="commentUser" placeholder="닉네임" maxlength="10">
+            <textarea id="commentInput" placeholder="댓글을 입력하세요..." maxlength="100" style="height: 80px;"></textarea>
+            <button onclick="addComment()" class="main-btn">댓글 달기</button>
+        </div>
+        
+        <div id="commentList" class="comment-list">
+            <!-- 댓글이 여기에 표시됩니다 -->
+        </div>
     </div>
 </div>
 
@@ -412,6 +490,51 @@
         }
     }
 
+    // 자체 댓글 로직
+    function loadComments() {
+        const comments = JSON.parse(localStorage.getItem('my_comments') || '[]');
+        const list = document.getElementById('commentList');
+        list.innerHTML = '';
+        
+        if (comments.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:var(--text-desc); font-size:13px; margin-top:20px;">첫 댓글을 남겨보세요!</div>';
+            return;
+        }
+
+        comments.reverse().forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'comment-item';
+            item.innerHTML = `
+                <div class="comment-header">
+                    <span class="comment-user">${c.user}</span>
+                    <span class="comment-date">${c.date}</span>
+                </div>
+                <div class="comment-text">${c.text}</div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    function addComment() {
+        const user = document.getElementById('commentUser').value.trim() || '익명';
+        const text = document.getElementById('commentInput').value.trim();
+        
+        if (!text) return alert('내용을 입력해주세요!');
+        
+        const comments = JSON.parse(localStorage.getItem('my_comments') || '[]');
+        const newComment = {
+            user: user,
+            text: text,
+            date: new Date().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        };
+        
+        comments.push(newComment);
+        localStorage.setItem('my_comments', JSON.stringify(comments));
+        
+        document.getElementById('commentInput').value = '';
+        loadComments();
+    }
+
     currencySelect.addEventListener('change', () => updateCalculation());
     foreignInput.addEventListener('input', () => updateCalculation('foreign'));
     krwInput.addEventListener('input', () => updateCalculation('krw'));
@@ -423,14 +546,8 @@
             document.getElementById('theme-text').innerText = '라이트 모드';
         }
         fetchRates();
+        loadComments();
     };
-
-    (function() {
-        var d = document, s = d.createElement('script');
-        s.src = 'https://konkeul.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
 </script>
 </body>
 </html>
