@@ -600,12 +600,26 @@
     function subscribeComments() {
         if (!_supabase) return;
         
+        // 기존 채널이 있다면 제거하고 새로 연결
+        _supabase.removeAllChannels();
+
         _supabase
-            .channel('public:comments')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, (payload) => {
-                loadComments(); // 새 댓글이 오면 다시 불러오기
-            })
-            .subscribe();
+            .channel('schema-db-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'comments'
+                },
+                (payload) => {
+                    console.log('새 댓글 감지:', payload.new);
+                    loadComments(); // 새 데이터가 들어오면 즉시 목록 갱신
+                }
+            )
+            .subscribe((status) => {
+                console.log('실시간 연결 상태:', status);
+            });
     }
 
     currencySelect.addEventListener('change', () => updateCalculation());
