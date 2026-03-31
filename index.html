@@ -301,12 +301,16 @@
 </div>
 
 <div id="calc-tab" class="tab-content active">
-    <div class="card">
-        <div class="title">🌍 글로벌 환율 계산기</div>
-        <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
-        
-        <!-- 외화 입력 -->
-        <div class="input-group">
+<div class="card">
+    <div class="title">🌍 글로벌 환율 계산기</div>
+    <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
+
+    <!-- 실시간 상태 배지 복구 -->
+    <div style="text-align: center;">
+        <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
+    </div>
+
+    <!-- 외화 입력 -->        <div class="input-group">
             <div class="label-row">
                 <label>대상 통화 선택</label>
                 <select id="currencySelect">
