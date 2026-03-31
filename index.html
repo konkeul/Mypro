@@ -590,6 +590,8 @@
             alert('오류가 발생했습니다: ' + error.message);
         } else {
             document.getElementById('commentInput').value = '';
+            // 댓글 작성 성공 시 즉시 내 화면을 먼저 갱신
+            await loadComments();
         }
         
         btn.disabled = false;
@@ -600,11 +602,8 @@
     function subscribeComments() {
         if (!_supabase) return;
         
-        // 기존 채널이 있다면 제거하고 새로 연결
-        _supabase.removeAllChannels();
-
-        _supabase
-            .channel('schema-db-changes')
+        const channel = _supabase
+            .channel('realtime-comments')
             .on(
                 'postgres_changes',
                 {
@@ -613,8 +612,9 @@
                     table: 'comments'
                 },
                 (payload) => {
-                    console.log('새 댓글 감지:', payload.new);
-                    loadComments(); // 새 데이터가 들어오면 즉시 목록 갱신
+                    console.log('새 댓글 실시간 수신:', payload.new);
+                    // 다른 사람이 쓴 댓글도 즉시 반영하기 위해 다시 불러옴
+                    loadComments();
                 }
             )
             .subscribe((status) => {
