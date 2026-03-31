@@ -396,7 +396,18 @@
 
     let rates = {};
     const symbols = {'USD':'$','JPY':'¥','EUR':'€','CNY':'¥','GBP':'£'};
+    
+    // 현재 선택된 조절 단위 (기본값)
+    let steps = { foreign: 1, krw: 1000 };
 
+    function setStep(type, val, btn) {
+        steps[type] = val;
+        const btns = document.getElementsByClassName(type + '-step');
+        for (let b of btns) b.classList.remove('active');
+        btn.classList.add('active');
+    }
+
+    // 천 단위 쉼표 포맷팅 함수
     function formatNumber(val) {
         if (!val && val !== 0) return '';
         let str = val.toString().replace(/,/g, '');
@@ -433,11 +444,21 @@
         }
     }
 
-    function adjust(type, amount) {
+    function adjust(type, direction) {
         const input = (type === 'foreign') ? foreignInput : krwInput;
         const currentVal = parseFloat(unformatNumber(input.value)) || 0;
+        
+        // 현재 설정된 단위를 곱해서 더하거나 뺌
+        const amount = steps[type] * direction;
         const newVal = Math.max(0, currentVal + amount);
-        input.value = (type === 'foreign') ? formatNumber(newVal.toFixed(2)) : formatNumber(Math.round(newVal));
+        
+        if (type === 'foreign') {
+            // 소수점 자리수 결정 (단위가 1 미만이면 소수점 표시)
+            const precision = steps.foreign < 1 ? (steps.foreign === 0.01 ? 2 : 1) : 2;
+            input.value = formatNumber(newVal.toFixed(precision));
+        } else {
+            input.value = formatNumber(Math.round(newVal));
+        }
         updateCalculation(type);
     }
 
@@ -457,8 +478,8 @@
     }
 
     function updateCalculation(source) {
-        if (!rates[currencySelect.value]) return;
         const currency = currencySelect.value;
+        if (!rates[currency]) return;
         const rateToKrw = rates[currency];
         foreignSymbol.innerText = symbols[currency];
         
@@ -469,16 +490,19 @@
 
         if (source === 'foreign') {
             const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
-            foreignInput.value = formatNumber(unformatNumber(foreignInput.value));
             krwInput.value = formatNumber(Math.round(val * rateToKrw));
         } else if (source === 'krw') {
             const val = parseFloat(unformatNumber(krwInput.value)) || 0;
-            krwInput.value = formatNumber(unformatNumber(krwInput.value));
-            foreignInput.value = formatNumber(((val) / rateToKrw).toFixed(2));
+            foreignInput.value = formatNumber((val / rateToKrw).toFixed(2));
         } else {
-            const initVal = (currency === 'JPY') ? 100 : 1;
-            foreignInput.value = formatNumber(initVal);
-            krwInput.value = formatNumber(Math.round(initVal * rateToKrw));
+            // 통화 변경 시 초기화 및 엔화 단위 대응
+            if (currency === 'JPY') {
+                foreignInput.value = "100";
+                // 엔화일 경우 외화 조절 단위를 100, 10, 1로 변경하는 시각적 힌트 제공 가능 (선택사항)
+            } else {
+                foreignInput.value = "1";
+            }
+            krwInput.value = formatNumber(Math.round(parseFloat(unformatNumber(foreignInput.value)) * rateToKrw));
         }
     }
 
@@ -519,6 +543,16 @@
 
     window.onload = () => {
         if (localStorage.getItem('theme') === 'light') {
+            document.body.setAttribute('data-theme', 'light');
+            document.getElementById('theme-icon').innerText = '☀️';
+            document.getElementById('theme-text').innerText = '라이트 모드';
+        }
+        fetchRates(); loadComments(); subscribeComments();
+    };
+</script>
+</body>
+</html>
+light') {
             document.body.setAttribute('data-theme', 'light');
             document.getElementById('theme-icon').innerText = '☀️';
             document.getElementById('theme-text').innerText = '라이트 모드';
