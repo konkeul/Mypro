@@ -445,7 +445,12 @@
         try {
             const meta = await fetchStockData(symbol);
             const price = meta.regularMarketPrice;
-            const changePercent = (((price - meta.previousClose) / meta.previousClose) * 100).toFixed(2);
+            const prevClose = meta.previousClose || meta.chartPreviousClose || price;
+            
+            let changePercent = 0;
+            if (prevClose && prevClose !== 0) {
+                changePercent = (((price - prevClose) / prevClose) * 100).toFixed(2);
+            }
             const isUp = changePercent >= 0;
 
             if (type === 'recommend') {
@@ -473,7 +478,13 @@
                     const meta = result.value;
                     const symbol = popularSymbols[i];
                     const price = meta.regularMarketPrice;
-                    const changePercent = (((price - meta.previousClose) / meta.previousClose) * 100).toFixed(2);
+                    const prevClose = meta.previousClose || meta.chartPreviousClose || price; // 폴백 처리
+                    
+                    let changePercent = 0;
+                    if (prevClose && prevClose !== 0) {
+                        changePercent = (((price - prevClose) / prevClose) * 100).toFixed(2);
+                    }
+                    
                     const isUp = changePercent >= 0;
                     const name = names[symbol] || symbol;
 
