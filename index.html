@@ -221,6 +221,9 @@
             <button class="main-btn" style="margin-top: 10px; padding: 12px;" onclick="searchStock()">종목 검색</button>
         </div>
 
+        <!-- 검색 결과 표시 영역 -->
+        <div id="stockSearchResult" style="margin-bottom: 20px; display: none;"></div>
+
         <!-- 오늘의 추천 종목 -->
         <div style="margin-bottom: 25px;">
             <label style="display: block; margin-bottom: 10px; font-weight: bold; color: var(--accent);">⭐ 오늘의 추천 종목</label>
@@ -409,11 +412,15 @@
     async function searchStock() {
         const btn = document.querySelector('button[onclick="searchStock()"]');
         const query = document.getElementById('stockSearch').value.trim();
-        if (!query) return alert('검색할 종목명을 입력해주세요!');
+        const resultArea = document.getElementById('stockSearchResult');
+        
+        if (!query) return alert('검색할 종목코드 6자리를 입력해주세요!');
         
         const originalText = btn.innerText;
         btn.innerText = '검색 중...';
         btn.disabled = true;
+        resultArea.style.display = 'block';
+        resultArea.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:14px;">데이터를 찾는 중입니다...</div>';
 
         try {
             let symbol = /^\d+$/.test(query) ? `${query}.KS` : query;
@@ -422,7 +429,6 @@
             try {
                 meta = await fetchStockData(symbol);
             } catch (e) {
-                // 코스피에서 실패 시 코스닥(.KQ)으로 재시도
                 if (symbol.endsWith('.KS')) {
                     symbol = symbol.replace('.KS', '.KQ');
                     meta = await fetchStockData(symbol);
@@ -430,11 +436,35 @@
             }
 
             const price = meta.regularMarketPrice;
-            const changePercent = (((price - meta.previousClose) / meta.previousClose) * 100).toFixed(2);
+            const prevClose = meta.previousClose || meta.chartPreviousClose || price;
+            const changePercent = (((price - prevClose) / prevClose) * 100).toFixed(2);
             const isUp = changePercent >= 0;
-            alert(`[${meta.symbol}] 현재가: ${format(price.toFixed(0))}원 (${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%)`);
+
+            resultArea.innerHTML = `
+                <div class="comment-item" style="border: 2px solid var(--accent); background: rgba(0, 198, 255, 0.05); padding: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items: center;">
+                        <div>
+                            <span style="font-weight:bold; font-size: 18px; color:var(--accent);">${meta.symbol}</span>
+                            <span style="font-size: 12px; color: var(--text-desc); margin-left: 5px;">실시간 검색 결과</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: bold; font-size: 18px;">${format(price.toFixed(0))}원</div>
+                            <div style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: bold;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</div>
+                        </div>
+                    </div>
+                </div>
+            `;
         } catch (e) {
-            alert('종목 정보를 가져오는데 실패했습니다. 종목코드 6자리를 확인해주세요. (예: 005930)');
+            resultArea.innerHTML = `
+                <div class="comment-item" style="border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.05); padding: 15px;">
+                    <div style="color: #ff4d4d; font-weight: bold; margin-bottom: 8px;">❌ 종목을 찾을 수 없습니다.</div>
+                    <div style="font-size: 13px; color: var(--text-desc); line-height: 1.5;">
+                        • 한국 주식은 <strong>6자리 숫자</strong>를 입력해주세요.<br>
+                        • 예: <strong>005930</strong> (삼성전자), <strong>000660</strong> (SK하이닉스)<br>
+                        • 미국 주식은 <strong>티커</strong>를 입력해주세요. (예: <strong>AAPL</strong>)
+                    </div>
+                </div>
+            `;
         } finally {
             btn.innerText = originalText;
             btn.disabled = false;
