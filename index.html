@@ -139,7 +139,7 @@
 
     .calc-input {
         width: 100%;
-        padding: 16px 45px;
+        padding: 16px 20px 16px 45px;
         border-radius: 16px;
         border: 1px solid var(--input-border);
         background: var(--input-bg);
@@ -158,57 +158,6 @@
         font-weight: bold;
         font-size: 18px;
         pointer-events: none;
-    }
-
-    .spin-buttons {
-        position: absolute;
-        right: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .spin-btn {
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
-        color: var(--text-desc);
-        width: 24px;
-        height: 22px;
-        border-radius: 4px;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.2s;
-    }
-
-    .spin-btn:active { transform: scale(0.9); background: rgba(0, 198, 255, 0.3); }
-
-    .step-btn-container {
-        display: flex;
-        gap: 6px;
-        margin-top: 10px;
-        justify-content: flex-end;
-    }
-
-    .step-btn {
-        background: var(--tab-bg);
-        border: 1px solid var(--input-border);
-        color: var(--tab-text);
-        padding: 5px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .step-btn:active { transform: scale(0.92); }
-    .step-btn.active {
-        background: #00c6ff;
-        color: white;
-        border-color: #00c6ff;
-        box-shadow: 0 0 10px rgba(0, 198, 255, 0.3);
     }
 
     .divider-container {
@@ -314,16 +263,6 @@
             <div class="input-wrapper">
                 <span class="currency-symbol" id="foreignSymbol">$</span>
                 <input type="text" id="foreignInput" class="calc-input" placeholder="0.00">
-                <div class="spin-buttons">
-                    <button class="spin-btn" onclick="adjust('foreign', 1)">▲</button>
-                    <button class="spin-btn" onclick="adjust('foreign', -1)">▼</button>
-                </div>
-            </div>
-            <div class="step-btn-container">
-                <span style="font-size: 11px; color: var(--text-desc); align-self: center;">조절 단위:</span>
-                <button id="f-step-1" class="step-btn foreign-step active" onclick="setStep('foreign', 1, this)">1</button>
-                <button id="f-step-2" class="step-btn foreign-step" onclick="setStep('foreign', 0.1, this)">0.1</button>
-                <button id="f-step-3" class="step-btn foreign-step" onclick="setStep('foreign', 0.01, this)">0.01</button>
             </div>
         </div>
         <div class="divider-container">
@@ -335,16 +274,6 @@
             <div class="input-wrapper">
                 <span class="currency-symbol">₩</span>
                 <input type="text" id="krwInput" class="calc-input" placeholder="0">
-                <div class="spin-buttons">
-                    <button class="spin-btn" onclick="adjust('krw', 1)">▲</button>
-                    <button class="spin-btn" onclick="adjust('krw', -1)">▼</button>
-                </div>
-            </div>
-            <div class="step-btn-container">
-                <span style="font-size: 11px; color: var(--text-desc); align-self: center;">조절 단위:</span>
-                <button id="k-step-1" class="step-btn krw-step active" onclick="setStep('krw', 1000, this)">1,000</button>
-                <button id="k-step-2" class="step-btn krw-step" onclick="setStep('krw', 100, this)">100</button>
-                <button id="k-step-3" class="step-btn krw-step" onclick="setStep('krw', 10, this)">10</button>
             </div>
         </div>
         <div class="rate-info">
@@ -392,7 +321,6 @@
 
     let rates = {};
     const symbols = {'USD':'$','JPY':'¥','EUR':'€','CNY':'¥','GBP':'£'};
-    let steps = { foreign: 1, krw: 1000 };
 
     function formatNumber(val) {
         if (!val && val !== 0) return '';
@@ -403,13 +331,6 @@
     }
 
     function unformatNumber(val) { return val.toString().replace(/,/g, ''); }
-
-    function setStep(type, val, btn) {
-        steps[type] = val;
-        const btns = document.getElementsByClassName(type + '-step');
-        for (let b of btns) b.classList.remove('active');
-        btn.classList.add('active');
-    }
 
     function openTab(tabId, btn) {
         const contents = document.getElementsByClassName('tab-content');
@@ -433,20 +354,6 @@
             icon.innerText = '☀️'; text.innerText = '라이트 모드';
             localStorage.setItem('theme', 'light');
         }
-    }
-
-    function adjust(type, direction) {
-        const input = (type === 'foreign') ? foreignInput : krwInput;
-        const currentVal = parseFloat(unformatNumber(input.value)) || 0;
-        const amount = steps[type] * direction;
-        const newVal = Math.max(0, currentVal + amount);
-        if (type === 'foreign') {
-            const precision = steps.foreign < 1 ? (steps.foreign === 0.01 ? 2 : 1) : 2;
-            input.value = formatNumber(newVal.toFixed(precision));
-        } else {
-            input.value = formatNumber(Math.round(newVal));
-        }
-        updateCalculation(type);
     }
 
     async function fetchRates() {
@@ -486,20 +393,9 @@
         } else {
             if (currency === 'JPY') {
                 foreignInput.value = "100";
-                document.getElementById('f-step-1').innerText = "100";
-                document.getElementById('f-step-2').innerText = "10";
-                document.getElementById('f-step-3').innerText = "1";
-                steps.foreign = 100;
             } else {
                 foreignInput.value = "1";
-                document.getElementById('f-step-1').innerText = "1";
-                document.getElementById('f-step-2').innerText = "0.1";
-                document.getElementById('f-step-3').innerText = "0.01";
-                steps.foreign = 1;
             }
-            const fBtns = document.getElementsByClassName('foreign-step');
-            for(let b of fBtns) b.classList.remove('active');
-            document.getElementById('f-step-1').classList.add('active');
             krwInput.value = formatNumber(Math.round(parseFloat(unformatNumber(foreignInput.value)) * rateToKrw));
         }
     }
