@@ -298,7 +298,7 @@
                 <input type="text" id="foreignInput" class="calc-input" placeholder="0.00">
             </div>
             <div class="slider-container">
-                <input type="range" id="foreignSlider" class="calc-slider" min="0" max="5000" step="1" value="1">
+                <input type="range" id="foreignSlider" class="calc-slider" min="0" max="10000" step="1" value="1">
             </div>
         </div>
         <div class="divider-container">
@@ -312,7 +312,7 @@
                 <input type="text" id="krwInput" class="calc-input" placeholder="0">
             </div>
             <div class="slider-container">
-                <input type="range" id="krwSlider" class="calc-slider" min="0" max="10000000" step="1000" value="0">
+                <input type="range" id="krwSlider" class="calc-slider" min="0" max="15000000" step="1000" value="0">
             </div>
         </div>
         <div class="rate-info">
@@ -427,13 +427,14 @@
             foreignSlider.max = 500000;
             foreignSlider.step = 100;
         } else if (currency === 'CNY') {
-            foreignSlider.max = 30000;
+            foreignSlider.max = 50000;
             foreignSlider.step = 10;
         } else {
-            foreignSlider.max = 5000;
+            foreignSlider.max = 10000;
             foreignSlider.step = 1;
         }
         currentRateText.innerText = `현재 환율: ${prefix} ${currency} = ${formatNumber(displayRate.toFixed(2))} KRW`;
+
 
         if (source === 'foreign') {
             const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
