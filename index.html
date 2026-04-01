@@ -160,6 +160,39 @@
         pointer-events: none;
     }
 
+    /* 슬라이더 스타일 */
+    .slider-container {
+        margin-top: 15px;
+        padding: 0 5px;
+    }
+
+    .calc-slider {
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 5px;
+        background: var(--input-border);
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .calc-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #00c6ff;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0, 198, 255, 0.4);
+        transition: transform 0.2s;
+    }
+
+    .calc-slider::-webkit-slider-thumb:active {
+        transform: scale(1.3);
+    }
+
     .divider-container {
         text-align: center;
         position: relative;
@@ -264,6 +297,9 @@
                 <span class="currency-symbol" id="foreignSymbol">$</span>
                 <input type="text" id="foreignInput" class="calc-input" placeholder="0.00">
             </div>
+            <div class="slider-container">
+                <input type="range" id="foreignSlider" class="calc-slider" min="0" max="5000" step="1" value="1">
+            </div>
         </div>
         <div class="divider-container">
             <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--input-border); z-index: 1;"></div>
@@ -274,6 +310,9 @@
             <div class="input-wrapper">
                 <span class="currency-symbol">₩</span>
                 <input type="text" id="krwInput" class="calc-input" placeholder="0">
+            </div>
+            <div class="slider-container">
+                <input type="range" id="krwSlider" class="calc-slider" min="0" max="10000000" step="1000" value="0">
             </div>
         </div>
         <div class="rate-info">
@@ -314,6 +353,8 @@
 
     const foreignInput = document.getElementById('foreignInput');
     const krwInput = document.getElementById('krwInput');
+    const foreignSlider = document.getElementById('foreignSlider');
+    const krwSlider = document.getElementById('krwSlider');
     const currencySelect = document.getElementById('currencySelect');
     const foreignSymbol = document.getElementById('foreignSymbol');
     const currentRateText = document.getElementById('currentRateText');
@@ -381,22 +422,40 @@
         foreignSymbol.innerText = symbols[currency];
         let displayRate = rateToKrw;
         let prefix = "1";
-        if (currency === 'JPY') { displayRate = rateToKrw * 100; prefix = "100"; }
+        if (currency === 'JPY') { 
+            displayRate = rateToKrw * 100; prefix = "100";
+            foreignSlider.max = 500000;
+            foreignSlider.step = 100;
+        } else if (currency === 'CNY') {
+            foreignSlider.max = 30000;
+            foreignSlider.step = 10;
+        } else {
+            foreignSlider.max = 5000;
+            foreignSlider.step = 1;
+        }
         currentRateText.innerText = `현재 환율: ${prefix} ${currency} = ${formatNumber(displayRate.toFixed(2))} KRW`;
 
         if (source === 'foreign') {
             const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
             krwInput.value = formatNumber(Math.round(val * rateToKrw));
+            foreignSlider.value = val;
+            krwSlider.value = Math.round(val * rateToKrw);
         } else if (source === 'krw') {
             const val = parseFloat(unformatNumber(krwInput.value)) || 0;
-            foreignInput.value = formatNumber((val / rateToKrw).toFixed(2));
+            const fVal = (val / rateToKrw).toFixed(2);
+            foreignInput.value = formatNumber(fVal);
+            krwSlider.value = val;
+            foreignSlider.value = fVal;
         } else {
             if (currency === 'JPY') {
                 foreignInput.value = "100";
             } else {
                 foreignInput.value = "1";
             }
-            krwInput.value = formatNumber(Math.round(parseFloat(unformatNumber(foreignInput.value)) * rateToKrw));
+            const fVal = parseFloat(unformatNumber(foreignInput.value));
+            krwInput.value = formatNumber(Math.round(fVal * rateToKrw));
+            foreignSlider.value = fVal;
+            krwSlider.value = Math.round(fVal * rateToKrw);
         }
     }
 
@@ -435,6 +494,16 @@
     currencySelect.addEventListener('change', () => updateCalculation());
     foreignInput.addEventListener('input', () => updateCalculation('foreign'));
     krwInput.addEventListener('input', () => updateCalculation('krw'));
+    
+    foreignSlider.addEventListener('input', (e) => {
+        foreignInput.value = formatNumber(e.target.value);
+        updateCalculation('foreign');
+    });
+    
+    krwSlider.addEventListener('input', (e) => {
+        krwInput.value = formatNumber(e.target.value);
+        updateCalculation('krw');
+    });
 
     window.onload = () => {
         if (localStorage.getItem('theme') === 'light') {
