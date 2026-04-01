@@ -395,32 +395,39 @@
         else { elements.commentInput.value = ''; loadComments(); }
     }
 
-    // 공통 데이터 페치 함수 (타임아웃 추가)
-    async function fetchStockData(symbol, timeout = 5000) {
-        const proxyUrl = 'https://api.allorigins.win/get?url=';
-        const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`);
+    // 공통 데이터 페치 함수 (프록시 변경 및 안정성 강화)
+    async function fetchStockData(symbol, timeout = 8000) {
+        // 더 안정적인 corsproxy.io 사용
+        const proxyUrl = 'https://corsproxy.io/?';
+        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
         
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), timeout);
 
         try {
-            const response = await fetch(`${proxyUrl}${targetUrl}`, { signal: controller.signal });
+            const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), { 
+                signal: controller.signal,
+                headers: { 'Accept': 'application/json' }
+            });
             clearTimeout(id);
-            if (!response.ok) throw new Error('Network response was not ok');
-            const json = await response.json();
-            const data = JSON.parse(json.contents);
             
-            if (!data || !data.chart || !data.chart.result) throw new Error('No data found');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const data = await response.json();
+            if (!data || !data.chart || !data.chart.result || data.chart.result.length === 0) {
+                throw new Error('No data found for symbol: ' + symbol);
+            }
             return data.chart.result[0].meta;
         } catch (e) {
             clearTimeout(id);
+            console.error(`Fetch error for ${symbol}:`, e.message);
             throw e;
         }
     }
 
     async function searchStock() {
         const btn = document.querySelector('button[onclick="searchStock()"]');
-        const query = document.getElementById('stockSearch').value.trim();
+        const query = document.getElementById('stockSearch').value.trim().toUpperCase();
         const resultArea = document.getElementById('stockSearchResult');
         
         if (!query) return alert('검색할 종목명 또는 코드를 입력해주세요!');
@@ -429,19 +436,26 @@
         btn.innerText = '검색 중...';
         btn.disabled = true;
         resultArea.style.display = 'block';
-        resultArea.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:14px;">⚡ 빛의 속도로 찾는 중...</div>';
+        resultArea.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:14px;">🔎 데이터를 찾는 중...</div>';
 
         try {
-            let meta;
+            let meta = null;
             if (/^\d{6}$/.test(query)) {
-                // 한국 주식 코드 6자리인 경우 코스피/코스닥 동시 검색 (병렬 처리)
+                // 한국 주식: 코스피/코스닥 순차적 또는 병렬 시도
                 const symbols = [`${query}.KS`, `${query}.KQ`];
-                // Promise.any를 사용하여 둘 중 하나라도 성공하면 즉시 반환
-                meta = await Promise.any(symbols.map(s => fetchStockData(s)));
+                // 더 안전한 순차적 시도 (병렬 실패 대비)
+                for (const s of symbols) {
+                    try {
+                        meta = await fetchStockData(s, 5000);
+                        if (meta) break;
+                    } catch (e) { continue; }
+                }
             } else {
-                // 일반 티커(AAPL 등) 검색
+                // 미국 주식 등 일반 티커
                 meta = await fetchStockData(query);
             }
+
+            if (!meta) throw new Error('종목을 찾을 수 없습니다.');
 
             const price = meta.regularMarketPrice;
             const prevClose = meta.previousClose || meta.chartPreviousClose || price;
@@ -467,9 +481,9 @@
                 <div class="comment-item" style="border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.05); padding: 15px;">
                     <div style="color: #ff4d4d; font-weight: bold; margin-bottom: 8px;">❌ 검색 결과가 없습니다.</div>
                     <div style="font-size: 13px; color: var(--text-desc); line-height: 1.5;">
-                        • 종목 코드가 정확한지 확인해 주세요.<br>
-                        • 한국 주식: <strong>005930</strong> (삼성전자)<br>
-                        • 미국 주식: <strong>NVDA</strong> (엔비디아)
+                        • 네트워크 상태를 확인해 주세요.<br>
+                        • 한국 주식 코드 6자리를 정확히 입력해 주세요. (예: 005930)<br>
+                        • 현재 API 연결이 원활하지 않을 수 있습니다. 잠시 후 다시 시도해 주세요.
                     </div>
                 </div>
             `;
