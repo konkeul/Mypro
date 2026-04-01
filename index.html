@@ -211,10 +211,50 @@
 <div id="stock" class="tab-content">
     <div class="card">
         <div class="title" style="font-size: 22px;">📈 실시간 주식 정보</div>
-        <div class="desc">국내 및 해외 주요 지수 정보를 확인하세요.</div>
-        <div style="text-align: center; padding: 40px 0; color: var(--text-desc);">
-            <div style="font-size: 40px; margin-bottom: 15px;">🚧</div>
-            <p>주식 정보 서비스 준비 중입니다.</p>
+        
+        <!-- 검색창 -->
+        <div class="input-group" style="margin-top: 20px;">
+            <div class="input-wrapper">
+                <span class="currency-symbol">🔍</span>
+                <input type="text" id="stockSearch" class="calc-input" placeholder="종목명 또는 코드 입력" style="font-size: 16px; padding-left: 45px;">
+            </div>
+            <button class="main-btn" style="margin-top: 10px; padding: 12px;" onclick="searchStock()">종목 검색</button>
+        </div>
+
+        <!-- 오늘의 추천 종목 -->
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: bold; color: var(--accent);">⭐ 오늘의 추천 종목</label>
+            <div class="comment-item" style="border-left: 4px solid #ff4d4d; background: rgba(255, 77, 77, 0.05);">
+                <div style="display:flex; justify-content:space-between; align-items: center;">
+                    <div>
+                        <span style="font-weight:bold; font-size: 16px;">삼성전자</span>
+                        <span style="font-size: 12px; color: var(--text-desc); margin-left: 5px;">005930</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: #ff4d4d; font-weight: bold;">72,400원</div>
+                        <div style="font-size: 12px; color: #ff4d4d;">▲ 1.2%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 인기 종목 리스트 -->
+        <div>
+            <label style="display: block; margin-bottom: 10px; font-weight: bold;">🔥 실시간 인기 종목</label>
+            <div id="popularStocks" style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
+                    <span>1. SK하이닉스</span>
+                    <span style="color: #ff4d4d; font-weight: 600;">▲ 2.5%</span>
+                </div>
+                <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
+                    <span>2. 에코프로</span>
+                    <span style="color: #4d94ff; font-weight: 600;">▼ 0.8%</span>
+                </div>
+                <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
+                    <span>3. 현대차</span>
+                    <span style="color: #ff4d4d; font-weight: 600;">▲ 1.1%</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -350,6 +390,12 @@
         const { error } = await _supabase.from('comments').insert([{ user, text }]);
         if (error) alert('오류: ' + error.message);
         else { elements.commentInput.value = ''; loadComments(); }
+    }
+
+    function searchStock() {
+        const query = document.getElementById('stockSearch').value.trim();
+        if (!query) return alert('검색할 종목명을 입력해주세요!');
+        alert(`'${query}' 종목을 검색 중입니다... (현재는 시뮬레이션 모드입니다)`);
     }
 
     function toggleTheme() {
