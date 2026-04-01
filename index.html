@@ -3,29 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>스마트 글로벌 환율 대시보드</title>
+<title>글로벌 실시간 환율 계산기</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
     :root {
-        --bg-gradient: radial-gradient(circle at top right, #0f172a, #1e293b);
-        --card-bg: rgba(30, 41, 59, 0.7);
-        --text-main: #f8fafc;
+        --bg-gradient: radial-gradient(circle at top left, #1a1a2e, #16213e);
+        --card-bg: rgba(255, 255, 255, 0.05);
+        --text-main: white;
         --text-desc: #94a3b8;
-        --accent: #38bdf8;
-        --up-color: #f43f5e; /* 상승: 빨강 */
-        --down-color: #10b981; /* 하락: 초록 */
-        --input-bg: rgba(15, 23, 42, 0.5);
+        --input-bg: rgba(0, 0, 0, 0.3);
         --input-border: rgba(255, 255, 255, 0.1);
+        --tab-bg: rgba(255, 255, 255, 0.05);
+        --tab-text: #94a3b8;
+        --rate-bg: rgba(143, 211, 244, 0.05);
+        --rate-border: rgba(143, 211, 244, 0.1);
+        --comment-bg: rgba(0, 0, 0, 0.2);
     }
 
     [data-theme="light"] {
-        --bg-gradient: radial-gradient(circle at top right, #f1f5f9, #e2e8f0);
-        --card-bg: rgba(255, 255, 255, 0.8);
-        --text-main: #0f172a;
+        --bg-gradient: radial-gradient(circle at top left, #f8fafc, #e2e8f0);
+        --card-bg: white;
+        --text-main: #1e293b;
         --text-desc: #64748b;
-        --accent: #0ea5e9;
-        --input-bg: #ffffff;
+        --input-bg: #f1f5f9;
         --input-border: #cbd5e1;
+        --tab-bg: #e2e8f0;
+        --tab-text: #64748b;
+        --rate-bg: #f0f9ff;
+        --rate-border: #bae6fd;
+        --comment-bg: #f8fafc;
     }
 
     body {
@@ -33,215 +39,310 @@
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        justify-content: center;
         align-items: center;
         background: var(--bg-gradient);
-        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        font-family: 'Segoe UI', system-ui, sans-serif;
         color: var(--text-main);
-        padding: 40px 20px;
+        padding: 20px;
         box-sizing: border-box;
-        transition: all 0.3s;
+        transition: background 0.3s, color 0.3s;
     }
 
-    .container {
-        width: 100%;
-        max-width: 480px;
+    /* 테마 전환 버튼: 화면 하단 구석으로 이동하여 탭 가림 방지 */
+    .theme-toggle {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        background: var(--card-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-main);
+        padding: 10px 18px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-size: 13px;
         display: flex;
-        flex-direction: column;
-        gap: 20px;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        z-index: 1000;
+        transition: all 0.2s;
+        backdrop-filter: blur(10px);
     }
+
+    .theme-toggle:active { transform: scale(0.95); }
 
     .card {
+        width: 100%;
+        max-width: 420px;
         padding: 30px;
-        border-radius: 32px;
+        border-radius: 28px;
         background: var(--card-bg);
-        backdrop-filter: blur(20px);
+        backdrop-filter: blur(15px);
         border: 1px solid var(--input-border);
-        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+        box-sizing: border-box;
     }
 
-    .header { text-align: center; margin-bottom: 30px; }
-    .title { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: var(--accent); }
-    .subtitle { font-size: 14px; color: var(--text-desc); }
+    .title {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 10px;
+        text-align: center;
+        background: linear-gradient(90deg, #6a5cff, #00c6ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
 
-    /* 환율 비교 위젯 */
-    .comparison-box {
-        background: var(--input-bg);
-        border-radius: 20px;
-        padding: 20px;
+    .desc {
+        font-size: 15px;
+        color: var(--text-desc);
         margin-bottom: 25px;
-        border: 1px solid var(--input-border);
         text-align: center;
     }
-    .comparison-label { font-size: 12px; color: var(--text-desc); margin-bottom: 8px; }
-    .comparison-value { font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .diff-tag { font-size: 13px; padding: 4px 10px; border-radius: 8px; font-weight: 600; }
-    .diff-up { background: rgba(244, 63, 94, 0.1); color: var(--up-color); }
-    .diff-down { background: rgba(16, 185, 129, 0.1); color: var(--down-color); }
 
-    .input-section { margin-bottom: 25px; }
-    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    label { font-size: 13px; font-weight: 700; color: var(--text-desc); text-transform: uppercase; letter-spacing: 0.5px; }
-    
+    .status-badge {
+        display: inline-block;
+        font-size: 12px;
+        padding: 6px 15px;
+        border-radius: 20px;
+        margin-bottom: 30px;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981 !important;
+        font-weight: bold;
+        cursor: pointer;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        transition: all 0.2s;
+    }
+
+    .status-badge:active { transform: scale(0.95); background: rgba(16, 185, 129, 0.2); }
+
+    .input-group { margin-bottom: 24px; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    label { font-size: 14px; color: var(--text-desc); font-weight: 600; }
+
     select {
-        background: var(--input-bg);
+        background: var(--tab-bg);
         border: 1px solid var(--input-border);
         color: var(--text-main);
-        padding: 6px 12px;
-        border-radius: 12px;
+        padding: 6px 10px;
+        border-radius: 10px;
         font-size: 13px;
         outline: none;
         cursor: pointer;
     }
 
-    .input-wrapper { position: relative; margin-bottom: 12px; }
+    option { background-color: #1e2a44; color: white; }
+    body[data-theme="light"] option { background-color: white; color: black; }
+
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+
     .calc-input {
         width: 100%;
-        padding: 18px 20px 18px 50px;
-        border-radius: 20px;
+        padding: 16px 20px 16px 45px;
+        border-radius: 16px;
         border: 1px solid var(--input-border);
         background: var(--input-bg);
         color: var(--text-main);
-        font-size: 24px;
-        font-weight: 700;
+        font-size: 22px;
+        font-weight: 600;
         outline: none;
         box-sizing: border-box;
-        transition: border-color 0.3s;
+        transition: all 0.3s;
     }
-    .calc-input:focus { border-color: var(--accent); }
-    .currency-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--accent); font-weight: 800; }
+
+    .currency-symbol {
+        position: absolute;
+        left: 18px;
+        color: #00c6ff;
+        font-weight: bold;
+        font-size: 18px;
+        pointer-events: none;
+    }
 
     /* 슬라이더 스타일 */
-    .slider-container { padding: 5px 0; }
+    .slider-container {
+        margin-top: 15px;
+        padding: 0 5px;
+    }
+
     .calc-slider {
-        -webkit-appearance: none; width: 100%; height: 6px; border-radius: 10px;
-        background: var(--input-border); outline: none; cursor: pointer;
+        -webkit-appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 5px;
+        background: var(--input-border);
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s;
     }
+
     .calc-slider::-webkit-slider-thumb {
-        -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
-        background: var(--accent); cursor: pointer; border: 3px solid var(--card-bg);
-        box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); transition: transform 0.2s;
-    }
-    .calc-slider::-webkit-slider-thumb:active { transform: scale(1.2); }
-
-    .divider { height: 1px; background: var(--input-border); margin: 30px 0; position: relative; }
-    .divider::after {
-        content: "↕"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-        background: var(--card-bg); width: 30px; height: 30px; display: flex; align-items: center;
-        justify-content: center; border-radius: 50%; border: 1px solid var(--input-border); color: var(--accent);
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #00c6ff;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0, 198, 255, 0.4);
+        transition: transform 0.2s;
     }
 
-    .tab-nav { display: flex; background: var(--input-bg); padding: 5px; border-radius: 16px; margin-bottom: 20px; }
+    .calc-slider::-webkit-slider-thumb:active {
+        transform: scale(1.3);
+    }
+
+    .divider-container {
+        text-align: center;
+        position: relative;
+        margin: 10px 0 20px 0;
+    }
+
+    .rate-info {
+        margin-top: 15px;
+        padding: 20px;
+        border-radius: 18px;
+        background: var(--rate-bg);
+        border: 1px solid var(--rate-border);
+        text-align: center;
+    }
+
+    /* 업데이트 강조 애니메이션 */
+    @keyframes update-pop {
+        0% { transform: scale(1); color: var(--text-main); }
+        50% { transform: scale(1.1); color: #00c6ff; font-weight: bold; }
+        100% { transform: scale(1); color: var(--text-desc); }
+    }
+
+    .update-anim {
+        animation: update-pop 0.6s ease-out;
+    }
+
+    .tab-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+        width: 100%;
+        max-width: 420px;
+    }
+
     .tab-btn {
-        flex: 1; padding: 12px; border: none; background: transparent; color: var(--text-desc);
-        font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 12px; transition: all 0.2s;
+        flex: 1;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--input-border);
+        background: var(--tab-bg);
+        color: var(--tab-text);
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
     }
-    .tab-btn.active { background: var(--card-bg); color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
-    .tab-content { display: none; }
+    .tab-btn:active { transform: scale(0.95); }
+    .tab-btn.active {
+        background: rgba(0, 198, 255, 0.2);
+        color: #00c6ff;
+        border-color: #00c6ff;
+    }
+
+    .tab-content { display: none; width: 100%; max-width: 420px; }
     .tab-content.active { display: block; }
 
-    .theme-toggle {
-        position: fixed; bottom: 30px; right: 30px; background: var(--card-bg);
-        border: 1px solid var(--input-border); color: var(--text-main);
-        padding: 12px; border-radius: 50%; cursor: pointer; width: 50px; height: 50px;
-        display: flex; align-items: center; justify-content: center; font-size: 20px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 1000;
-    }
+    .comment-list { display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; }
+    .comment-item { padding: 12px; border-radius: 12px; background: var(--comment-bg); border: 1px solid var(--input-border); }
 
-    .comment-list { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; max-height: 300px; overflow-y: auto; }
-    .comment-item { padding: 15px; border-radius: 16px; background: var(--input-bg); border: 1px solid var(--input-border); }
-    
     .main-btn {
-        width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 16px; font-weight: 800;
-        color: white; cursor: pointer; background: linear-gradient(135deg, #0ea5e9, #6366f1);
-        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3); transition: transform 0.2s;
+        width: 100%; padding: 16px; border-radius: 12px; border: none;
+        font-size: 16px; font-weight: bold; color: white; cursor: pointer;
+        background: linear-gradient(90deg, #6a5cff, #00c6ff);
+        transition: all 0.2s;
     }
-    .main-btn:active { transform: scale(0.98); }
+    .main-btn:active { transform: scale(0.98); opacity: 0.9; }
 </style>
 </head>
 <body>
 
-<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+<!-- 테마 전환 버튼: 우측 하단 고정 플로팅 버튼 -->
+<button class="theme-toggle" onclick="toggleTheme()">
+    <span id="theme-icon">🌙</span> <span id="theme-text">다크 모드</span>
+</button>
 
-<div class="container">
-    <div class="tab-nav">
-        <button class="tab-btn active" onclick="switchTab('calc-tab', this)">💱 계산기</button>
-        <button class="tab-btn" onclick="switchTab('comment-tab', this)">💬 커뮤니티</button>
-        <button class="tab-btn" onclick="switchTab('info-tab', this)">ℹ️ 정보</button>
-    </div>
+<div class="tab-container">
+    <button class="tab-btn active" onclick="openTab('calc-tab', this)">💱 계산기</button>
+    <button class="tab-btn" onclick="openTab('contact-tab', this)">🤝 문의</button>
+    <button class="tab-btn" onclick="openTab('comment-tab', this)">💬 댓글</button>
+</div>
 
-    <div id="calc-tab" class="tab-content active">
-        <div class="card">
-            <div class="header">
-                <div class="title">Exchange AI</div>
-                <div class="subtitle">실시간 데이터 및 과거 환율 비교</div>
+<div id="calc-tab" class="tab-content active">
+    <div class="card">
+        <div class="title">🌍 글로벌 환율 계산기</div>
+        <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
+        <div style="text-align: center;">
+            <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
+        </div>
+        <div class="input-group">
+            <div class="label-row">
+                <label>대상 통화 선택</label>
+                <select id="currencySelect">
+                    <option value="USD" selected>미국 달러 (USD)</option>
+                    <option value="JPY">일본 엔 (JPY)</option>
+                    <option value="EUR">유럽 유로 (EUR)</option>
+                    <option value="CNY">중국 위안 (CNY)</option>
+                    <option value="GBP">영국 파운드 (GBP)</option>
+                </select>
             </div>
-
-            <div class="comparison-box">
-                <div class="comparison-label">일주일 전 환율 대비 (7일 전)</div>
-                <div id="compareResult" class="comparison-value">데이터 분석 중...</div>
+            <div class="input-wrapper">
+                <span class="currency-symbol" id="foreignSymbol">$</span>
+                <input type="text" id="foreignInput" class="calc-input" placeholder="0.00">
             </div>
-
-            <div class="input-section">
-                <div class="label-row">
-                    <label>외화 금액</label>
-                    <select id="currencySelect">
-                        <option value="USD" selected>USD (달러)</option>
-                        <option value="JPY">JPY (엔)</option>
-                        <option value="EUR">EUR (유로)</option>
-                        <option value="CNY">CNY (위안)</option>
-                        <option value="GBP">GBP (파운드)</option>
-                    </select>
-                </div>
-                <div class="input-wrapper">
-                    <span class="currency-icon" id="foreignIcon">$</span>
-                    <input type="text" id="foreignInput" class="calc-input" value="1">
-                </div>
-                <div class="slider-container">
-                    <input type="range" id="foreignSlider" class="calc-slider" min="0" max="10000" step="1" value="1">
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="input-section">
-                <div class="label-row"><label>대한민국 원 (KRW)</label></div>
-                <div class="input-wrapper">
-                    <span class="currency-icon">₩</span>
-                    <input type="text" id="krwInput" class="calc-input" value="0">
-                </div>
-                <div class="slider-container">
-                    <input type="range" id="krwSlider" class="calc-slider" min="0" max="15000000" step="1000" value="0">
-                </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-desc);" id="updateTime">
-                최신 환율 로드 중...
+            <div class="slider-container">
+                <input type="range" id="foreignSlider" class="calc-slider" min="0" max="10000" step="1" value="1">
             </div>
         </div>
-    </div>
-
-    <div id="comment-tab" class="tab-content">
-        <div class="card">
-            <div class="title" style="font-size: 20px;">💬 실시간 의견</div>
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
-                <input type="text" id="nick" placeholder="닉네임" style="padding:12px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main);">
-                <textarea id="msg" placeholder="환율 전망을 공유해보세요!" style="height:80px; padding:12px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); resize:none;"></textarea>
-                <button onclick="postComment()" class="main-btn">댓글 작성</button>
+        <div class="divider-container">
+            <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--input-border); z-index: 1;"></div>
+            <span style="position: relative; z-index: 2; background: var(--card-bg); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--input-border); color: #00c6ff; font-size: 14px; font-weight: bold;">환산 결과</span>
+        </div>
+        <div class="input-group">
+            <div class="label-row"><label>대한민국 원 (KRW)</label></div>
+            <div class="input-wrapper">
+                <span class="currency-symbol">₩</span>
+                <input type="text" id="krwInput" class="calc-input" placeholder="0">
             </div>
-            <div id="comments" class="comment-list"></div>
+            <div class="slider-container">
+                <input type="range" id="krwSlider" class="calc-slider" min="0" max="15000000" step="1000" value="0">
+            </div>
+        </div>
+        <div class="rate-info">
+            <div id="currentRateText" style="font-weight: 600; margin-bottom: 5px; font-size: 16px;">환율 정보를 불러오는 중...</div>
+            <div id="lastUpdateTime" style="font-size: 12px; color: var(--text-desc); display: inline-block;">업데이트 확인 중</div>
         </div>
     </div>
+</div>
 
-    <div id="info-tab" class="tab-content">
-        <div class="card">
-            <div class="title" style="font-size: 20px;">ℹ️ 서비스 정보</div>
-            <p style="font-size: 14px; line-height: 1.6; color: var(--text-desc);">
-                본 서비스는 Coinbase의 실시간 데이터와 Frankfurter의 과거 환율 데이터를 결합하여 제공합니다.<br><br>
-                비교 기능은 일주일 전(7일 전) 종가와 현재 실시간 환율을 비교하여 시장의 흐름을 파악하는 데 도움을 줍니다.
-            </p>
-            <button onclick="location.href='index_v1.html'" class="main-btn" style="background: var(--input-bg); color: var(--text-main); border: 1px solid var(--input-border); margin-top: 20px;">이전 버전(클래식)으로 돌아가기</button>
+<div id="contact-tab" class="tab-content">
+    <div class="card">
+        <div class="title" style="font-size: 22px;">🤝 제휴 문의</div>
+        <form action="https://formspree.io/f/xdapzkgo" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="text" name="name" placeholder="성함 또는 업체명" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
+            <input type="email" name="_replyto" placeholder="이메일 주소" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
+            <textarea name="message" placeholder="문의 내용" required style="height: 120px; padding: 14px; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); font-family: inherit; font-size:15px; outline: none; resize: none; box-sizing:border-box;"></textarea>
+            <button type="submit" class="main-btn">문의 보내기</button>
+        </form>
+    </div>
+</div>
+
+<div id="comment-tab" class="tab-content">
+    <div class="card">
+        <div class="title" style="font-size: 22px; margin-bottom: 15px;">💬 실시간 댓글</div>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">
+            <input type="text" id="commentUser" placeholder="닉네임" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
+            <textarea id="commentInput" placeholder="댓글을 입력하세요..." style="height: 90px; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); resize:none; box-sizing:border-box; font-size:15px;"></textarea>
+            <button onclick="addComment()" class="main-btn">댓글 달기</button>
         </div>
+        <div id="commentList" class="comment-list"></div>
     </div>
 </div>
 
@@ -250,131 +351,168 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1Ym9hZHJ2bWNyc2Z4dXRqbWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDcxODUsImV4cCI6MjA5MDUyMzE4NX0.aFisTHVpvqmEjiFuN1a4sWMKz1zL7W99fT9Blco72Zs';
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    const fInput = document.getElementById('foreignInput');
-    const kInput = document.getElementById('krwInput');
-    const fSlider = document.getElementById('foreignSlider');
-    const kSlider = document.getElementById('krwSlider');
-    const cSelect = document.getElementById('currencySelect');
-    const fIcon = document.getElementById('foreignIcon');
-    const compBox = document.getElementById('compareResult');
+    const foreignInput = document.getElementById('foreignInput');
+    const krwInput = document.getElementById('krwInput');
+    const foreignSlider = document.getElementById('foreignSlider');
+    const krwSlider = document.getElementById('krwSlider');
+    const currencySelect = document.getElementById('currencySelect');
+    const foreignSymbol = document.getElementById('foreignSymbol');
+    const currentRateText = document.getElementById('currentRateText');
+    const lastUpdateTime = document.getElementById('lastUpdateTime');
 
-    let curRates = {};
-    let oldRates = {};
-    const syms = {'USD':'$','JPY':'¥','EUR':'€','CNY':'¥','GBP':'£'};
+    let rates = {};
+    const symbols = {'USD':'$','JPY':'¥','EUR':'€','CNY':'¥','GBP':'£'};
 
-    function format(n) { return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-    function unformat(s) { return s.toString().replace(/,/g, ''); }
-
-    async function fetchData() {
-        try {
-            // 1. 현재 환율 (Coinbase)
-            const res = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=KRW');
-            const data = await res.json();
-            const r = data.data.rates;
-            curRates = {'USD': 1/r.USD, 'JPY': 1/r.JPY, 'EUR': 1/r.EUR, 'CNY': 1/r.CNY, 'GBP': 1/r.GBP};
-            document.getElementById('updateTime').innerText = `최종 갱신: ${new Date().toLocaleTimeString()}`;
-
-            // 2. 7일 전 환율 (Frankfurter)
-            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            const oldRes = await fetch(`https://api.frankfurter.dev/v2/${weekAgo}?base=KRW`);
-            const oldData = await oldRes.json();
-            const or = oldData.rates;
-            oldRates = {'USD': 1/or.USD, 'JPY': 1/or.JPY, 'EUR': 1/or.EUR, 'CNY': 1/or.CNY, 'GBP': 1/or.GBP};
-
-            updateAll();
-        } catch (e) { console.error(e); }
+    function formatNumber(val) {
+        if (!val && val !== 0) return '';
+        let str = val.toString().replace(/,/g, '');
+        let parts = str.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
     }
 
-    function updateAll(src) {
-        const cur = cSelect.value;
-        const rate = curRates[cur];
-        const oldRate = oldRates[cur];
-        fIcon.innerText = syms[cur];
+    function unformatNumber(val) { return val.toString().replace(/,/g, ''); }
 
-        // 슬라이더 범위 조정
-        if (cur === 'JPY') { fSlider.max = 500000; fSlider.step = 100; }
-        else if (cur === 'CNY') { fSlider.max = 50000; fSlider.step = 10; }
-        else { fSlider.max = 10000; fSlider.step = 1; }
-
-        // 비교 로직
-        if (oldRate) {
-            let diff = rate - oldRate;
-            let percent = (diff / oldRate * 100).toFixed(2);
-            let sign = diff > 0 ? '▲' : '▼';
-            let cls = diff > 0 ? 'diff-up' : 'diff-down';
-            compBox.innerHTML = `₩ ${format(rate.toFixed(2))} <span class="diff-tag ${cls}">${sign} ${format(Math.abs(diff).toFixed(2))} (${percent}%)</span>`;
-        }
-
-        // 계산 로직
-        if (src === 'f') {
-            let v = parseFloat(unformat(fInput.value)) || 0;
-            kInput.value = format(Math.round(v * rate));
-            fSlider.value = v; kSlider.value = Math.round(v * rate);
-        } else if (src === 'k') {
-            let v = parseFloat(unformat(kInput.value)) || 0;
-            fInput.value = (v / rate).toFixed(2);
-            kSlider.value = v; fSlider.value = (v / rate);
-        } else {
-            fInput.value = cur === 'JPY' ? "100" : "1";
-            kInput.value = format(Math.round(parseFloat(fInput.value) * rate));
-            fSlider.value = fInput.value; kSlider.value = unformat(kInput.value);
-        }
-    }
-
-    function switchTab(id, btn) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+    function openTab(tabId, btn) {
+        const contents = document.getElementsByClassName('tab-content');
+        const buttons = document.getElementsByClassName('tab-btn');
+        for (let c of contents) c.classList.remove('active');
+        for (let b of buttons) b.classList.remove('active');
+        document.getElementById(tabId).classList.add('active');
         btn.classList.add('active');
     }
 
     function toggleTheme() {
-        const b = document.body;
-        const btn = document.getElementById('themeBtn');
-        if (b.getAttribute('data-theme') === 'light') {
-            b.removeAttribute('data-theme');
-            btn.innerText = '🌙';
+        const body = document.body;
+        const icon = document.getElementById('theme-icon');
+        const text = document.getElementById('theme-text');
+        if (body.getAttribute('data-theme') === 'light') {
+            body.removeAttribute('data-theme');
+            icon.innerText = '🌙'; text.innerText = '다크 모드';
             localStorage.setItem('theme', 'dark');
         } else {
-            b.setAttribute('data-theme', 'light');
-            btn.innerText = '☀️';
+            body.setAttribute('data-theme', 'light');
+            icon.innerText = '☀️'; text.innerText = '라이트 모드';
             localStorage.setItem('theme', 'light');
         }
     }
 
-    // 커뮤니티 기능 (기존 연동 유지)
+    async function fetchRates() {
+        const timeEl = document.getElementById('lastUpdateTime');
+        try {
+            const response = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=KRW');
+            const data = await response.json();
+            if (data && data.data && data.data.rates) {
+                const r = data.data.rates;
+                rates = {'USD': 1/r.USD, 'JPY': 1/r.JPY, 'EUR': 1/r.EUR, 'CNY': 1/r.CNY, 'GBP': 1/r.GBP};
+                timeEl.innerText = `마지막 확인: ${new Date().toLocaleTimeString()} (실시간)`;
+                timeEl.style.animation = 'none';
+                void timeEl.offsetHeight;
+                timeEl.style.animation = null;
+                timeEl.classList.add('update-pop');
+                updateCalculation();
+            }
+        } catch (e) { currentRateText.innerText = '환율 로드 오류'; }
+    }
+
+    function updateCalculation(source) {
+        const currency = currencySelect.value;
+        if (!rates[currency]) return;
+        const rateToKrw = rates[currency];
+        foreignSymbol.innerText = symbols[currency];
+        let displayRate = rateToKrw;
+        let prefix = "1";
+        if (currency === 'JPY') { 
+            displayRate = rateToKrw * 100; prefix = "100";
+            foreignSlider.max = 500000;
+            foreignSlider.step = 100;
+        } else if (currency === 'CNY') {
+            foreignSlider.max = 50000;
+            foreignSlider.step = 10;
+        } else {
+            foreignSlider.max = 10000;
+            foreignSlider.step = 1;
+        }
+        currentRateText.innerText = `현재 환율: ${prefix} ${currency} = ${formatNumber(displayRate.toFixed(2))} KRW`;
+
+
+        if (source === 'foreign') {
+            const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
+            krwInput.value = formatNumber(Math.round(val * rateToKrw));
+            foreignSlider.value = val;
+            krwSlider.value = Math.round(val * rateToKrw);
+        } else if (source === 'krw') {
+            const val = parseFloat(unformatNumber(krwInput.value)) || 0;
+            const fVal = (val / rateToKrw).toFixed(2);
+            foreignInput.value = formatNumber(fVal);
+            krwSlider.value = val;
+            foreignSlider.value = fVal;
+        } else {
+            if (currency === 'JPY') {
+                foreignInput.value = "100";
+            } else {
+                foreignInput.value = "1";
+            }
+            const fVal = parseFloat(unformatNumber(foreignInput.value));
+            krwInput.value = formatNumber(Math.round(fVal * rateToKrw));
+            foreignSlider.value = fVal;
+            krwSlider.value = Math.round(fVal * rateToKrw);
+        }
+    }
+
     async function loadComments() {
-        const { data } = await _supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(20);
-        const list = document.getElementById('comments');
-        list.innerHTML = data.map(c => `
-            <div class="comment-item">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                    <span style="font-weight:700; color:var(--accent);">${c.user}</span>
-                    <span style="font-size:11px; color:var(--text-desc);">${new Date(c.created_at).toLocaleDateString()}</span>
-                </div>
-                <div style="font-size:14px;">${c.text}</div>
-            </div>
-        `).join('') || '<div style="text-align:center; color:var(--text-desc);">첫 의견을 남겨보세요!</div>';
+        const { data, error } = await _supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
+        if (error) return;
+        const list = document.getElementById('commentList');
+        list.innerHTML = '';
+        if (data.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:var(--text-desc); font-size:14px; margin-top:20px;">첫 댓글을 남겨보세요!</div>';
+            return;
+        }
+        data.forEach(c => {
+            const date = new Date(c.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const item = document.createElement('div');
+            item.className = 'comment-item';
+            item.style.marginBottom = '10px';
+            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:bold; color:#00c6ff;">${c.user}</span><span style="font-size:11px; color:var(--text-desc);">${date}</span></div><div style="font-size:14px; line-height:1.5;">${c.text}</div>`;
+            list.appendChild(item);
+        });
     }
 
-    async function postComment() {
-        const u = document.getElementById('nick').value.trim() || '익명';
-        const t = document.getElementById('msg').value.trim();
-        if (!t) return alert('내용을 입력하세요!');
-        await _supabase.from('comments').insert([{ user: u, text: t }]);
-        document.getElementById('msg').value = '';
-        loadComments();
+    async function addComment() {
+        const user = document.getElementById('commentUser').value.trim() || '익명';
+        const text = document.getElementById('commentInput').value.trim();
+        if (!text) return alert('내용을 입력해주세요!');
+        const { error } = await _supabase.from('comments').insert([{ user: user, text: text }]);
+        if (error) alert('오류: ' + error.message);
+        else { document.getElementById('commentInput').value = ''; loadComments(); }
     }
 
-    cSelect.onchange = () => updateAll();
-    fInput.oninput = () => updateAll('f');
-    kInput.oninput = () => updateAll('k');
-    fSlider.oninput = (e) => { fInput.value = format(e.target.value); updateAll('f'); };
-    kSlider.oninput = (e) => { kInput.value = format(e.target.value); updateAll('k'); };
+    function subscribeComments() {
+        _supabase.channel('realtime-comments').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => loadComments()).subscribe();
+    }
+
+    currencySelect.addEventListener('change', () => updateCalculation());
+    foreignInput.addEventListener('input', () => updateCalculation('foreign'));
+    krwInput.addEventListener('input', () => updateCalculation('krw'));
+    
+    foreignSlider.addEventListener('input', (e) => {
+        foreignInput.value = formatNumber(e.target.value);
+        updateCalculation('foreign');
+    });
+    
+    krwSlider.addEventListener('input', (e) => {
+        krwInput.value = formatNumber(e.target.value);
+        updateCalculation('krw');
+    });
 
     window.onload = () => {
-        if (localStorage.getItem('theme') === 'light') toggleTheme();
-        fetchData(); loadComments();
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.setAttribute('data-theme', 'light');
+            document.getElementById('theme-icon').innerText = '☀️';
+            document.getElementById('theme-text').innerText = '라이트 모드';
+        }
+        fetchRates(); loadComments(); subscribeComments();
     };
 </script>
 </body>
