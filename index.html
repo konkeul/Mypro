@@ -49,7 +49,6 @@
         transition: background 0.3s, color 0.3s;
     }
 
-    /* 테마 전환 버튼: 화면 하단 구석으로 이동하여 탭 가림 방지 */
     .theme-toggle {
         position: fixed;
         bottom: 25px;
@@ -160,7 +159,6 @@
         pointer-events: none;
     }
 
-    /* 슬라이더 스타일 */
     .slider-container {
         margin-top: 15px;
         padding: 0 5px;
@@ -208,17 +206,6 @@
         text-align: center;
     }
 
-    /* 업데이트 강조 애니메이션 */
-    @keyframes update-pop {
-        0% { transform: scale(1); color: var(--text-main); }
-        50% { transform: scale(1.1); color: #00c6ff; font-weight: bold; }
-        100% { transform: scale(1); color: var(--text-desc); }
-    }
-
-    .update-anim {
-        animation: update-pop 0.6s ease-out;
-    }
-
     .tab-container {
         display: flex;
         gap: 10px;
@@ -238,6 +225,8 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
+        text-align: center;
+        text-decoration: none;
     }
 
     .tab-btn:active { transform: scale(0.95); }
@@ -264,18 +253,17 @@
 </head>
 <body>
 
-<!-- 테마 전환 버튼: 우측 하단 고정 플로팅 버튼 -->
 <button class="theme-toggle" onclick="toggleTheme()">
     <span id="theme-icon">🌙</span> <span id="theme-text">다크 모드</span>
 </button>
 
 <div class="tab-container">
-    <button class="tab-btn active" onclick="openTab('calc-tab', this)">💱 계산기</button>
-    <button class="tab-btn" onclick="openTab('contact-tab', this)">🤝 문의</button>
-    <button class="tab-btn" onclick="openTab('comment-tab', this)">💬 댓글</button>
+    <a href="#calculator" class="tab-btn active" id="btn-calculator">💱 계산기</a>
+    <a href="#contact" class="tab-btn" id="btn-contact">🤝 문의</a>
+    <a href="#comments" class="tab-btn" id="btn-comments">💬 댓글</a>
 </div>
 
-<div id="calc-tab" class="tab-content active">
+<div id="calculator" class="tab-content active">
     <div class="card">
         <div class="title">🌍 글로벌 환율 계산기</div>
         <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
@@ -322,7 +310,7 @@
     </div>
 </div>
 
-<div id="contact-tab" class="tab-content">
+<div id="contact" class="tab-content">
     <div class="card">
         <div class="title" style="font-size: 22px;">🤝 제휴 문의</div>
         <form action="https://formspree.io/f/xdapzkgo" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
@@ -334,7 +322,7 @@
     </div>
 </div>
 
-<div id="comment-tab" class="tab-content">
+<div id="comments" class="tab-content">
     <div class="card">
         <div class="title" style="font-size: 22px; margin-bottom: 15px;">💬 실시간 댓글</div>
         <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">
@@ -373,14 +361,32 @@
 
     function unformatNumber(val) { return val.toString().replace(/,/g, ''); }
 
-    function openTab(tabId, btn) {
+    // 라우팅 처리 함수
+    function handleRouting() {
+        const hash = window.location.hash || '#calculator';
+        const tabId = hash.substring(1);
+        
         const contents = document.getElementsByClassName('tab-content');
         const buttons = document.getElementsByClassName('tab-btn');
+        
+        // 모든 탭 숨기기
         for (let c of contents) c.classList.remove('active');
         for (let b of buttons) b.classList.remove('active');
-        document.getElementById(tabId).classList.add('active');
-        btn.classList.add('active');
+        
+        // 해당 탭 보이기
+        const targetTab = document.getElementById(tabId);
+        const targetBtn = document.getElementById('btn-' + tabId);
+        
+        if (targetTab && targetBtn) {
+            targetTab.classList.add('active');
+            targetBtn.classList.add('active');
+        } else {
+            // 잘못된 해시인 경우 기본값으로 리다이렉트
+            window.location.hash = '#calculator';
+        }
     }
+
+    window.addEventListener('hashchange', handleRouting);
 
     function toggleTheme() {
         const body = document.body;
@@ -406,10 +412,6 @@
                 const r = data.data.rates;
                 rates = {'USD': 1/r.USD, 'JPY': 1/r.JPY, 'EUR': 1/r.EUR, 'CNY': 1/r.CNY, 'GBP': 1/r.GBP};
                 timeEl.innerText = `마지막 확인: ${new Date().toLocaleTimeString()} (실시간)`;
-                timeEl.style.animation = 'none';
-                void timeEl.offsetHeight;
-                timeEl.style.animation = null;
-                timeEl.classList.add('update-pop');
                 updateCalculation();
             }
         } catch (e) { currentRateText.innerText = '환율 로드 오류'; }
@@ -422,6 +424,7 @@
         foreignSymbol.innerText = symbols[currency];
         let displayRate = rateToKrw;
         let prefix = "1";
+        
         if (currency === 'JPY') { 
             displayRate = rateToKrw * 100; prefix = "100";
             foreignSlider.max = 500000;
@@ -433,8 +436,8 @@
             foreignSlider.max = 10000;
             foreignSlider.step = 1;
         }
+        
         currentRateText.innerText = `현재 환율: ${prefix} ${currency} = ${formatNumber(displayRate.toFixed(2))} KRW`;
-
 
         if (source === 'foreign') {
             const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
@@ -448,11 +451,8 @@
             krwSlider.value = val;
             foreignSlider.value = fVal;
         } else {
-            if (currency === 'JPY') {
-                foreignInput.value = "100";
-            } else {
-                foreignInput.value = "1";
-            }
+            if (currency === 'JPY') foreignInput.value = "100";
+            else foreignInput.value = "1";
             const fVal = parseFloat(unformatNumber(foreignInput.value));
             krwInput.value = formatNumber(Math.round(fVal * rateToKrw));
             foreignSlider.value = fVal;
@@ -464,19 +464,15 @@
         const { data, error } = await _supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
         if (error) return;
         const list = document.getElementById('commentList');
-        list.innerHTML = '';
-        if (data.length === 0) {
-            list.innerHTML = '<div style="text-align:center; color:var(--text-desc); font-size:14px; margin-top:20px;">첫 댓글을 남겨보세요!</div>';
-            return;
-        }
-        data.forEach(c => {
-            const date = new Date(c.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            const item = document.createElement('div');
-            item.className = 'comment-item';
-            item.style.marginBottom = '10px';
-            item.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:bold; color:#00c6ff;">${c.user}</span><span style="font-size:11px; color:var(--text-desc);">${date}</span></div><div style="font-size:14px; line-height:1.5;">${c.text}</div>`;
-            list.appendChild(item);
-        });
+        list.innerHTML = data.map(c => `
+            <div class="comment-item" style="margin-bottom: 10px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-weight:bold; color:#00c6ff;">${c.user}</span>
+                    <span style="font-size:11px; color:var(--text-desc);">${new Date(c.created_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div style="font-size:14px; line-height:1.5;">${c.text}</div>
+            </div>
+        `).join('') || '<div style="text-align:center; color:var(--text-desc); font-size:14px; margin-top:20px;">첫 댓글을 남겨보세요!</div>';
     }
 
     async function addComment() {
@@ -488,23 +484,11 @@
         else { document.getElementById('commentInput').value = ''; loadComments(); }
     }
 
-    function subscribeComments() {
-        _supabase.channel('realtime-comments').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => loadComments()).subscribe();
-    }
-
     currencySelect.addEventListener('change', () => updateCalculation());
     foreignInput.addEventListener('input', () => updateCalculation('foreign'));
     krwInput.addEventListener('input', () => updateCalculation('krw'));
-    
-    foreignSlider.addEventListener('input', (e) => {
-        foreignInput.value = formatNumber(e.target.value);
-        updateCalculation('foreign');
-    });
-    
-    krwSlider.addEventListener('input', (e) => {
-        krwInput.value = formatNumber(e.target.value);
-        updateCalculation('krw');
-    });
+    foreignSlider.addEventListener('input', (e) => { foreignInput.value = formatNumber(e.target.value); updateCalculation('foreign'); });
+    krwSlider.addEventListener('input', (e) => { krwInput.value = formatNumber(e.target.value); updateCalculation('krw'); });
 
     window.onload = () => {
         if (localStorage.getItem('theme') === 'light') {
@@ -512,7 +496,8 @@
             document.getElementById('theme-icon').innerText = '☀️';
             document.getElementById('theme-text').innerText = '라이트 모드';
         }
-        fetchRates(); loadComments(); subscribeComments();
+        handleRouting(); // 초기 라우팅 처리
+        fetchRates(); loadComments();
     };
 </script>
 </body>
