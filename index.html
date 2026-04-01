@@ -465,7 +465,6 @@
         listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-desc);">🚀 실시간 데이터 불러오는 중...</div>';
 
         try {
-            // 모든 종목을 병렬로 동시에 요청 (속도 개선 핵심)
             const results = await Promise.allSettled(popularSymbols.map(s => fetchStockData(s)));
             
             let html = '';
@@ -480,8 +479,11 @@
 
                     html += `
                         <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;">
-                            <span style="font-weight:500;">${i+1}. ${name}</span>
-                            <span style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: 700;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</span>
+                            <span style="font-weight:600; flex: 1;">${i+1}. ${name}</span>
+                            <div style="text-align: right;">
+                                <span style="font-weight: 700; margin-right: 8px;">${format(price.toFixed(0))}원</span>
+                                <span style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: 700; font-size: 13px;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</span>
+                            </div>
                         </div>
                     `;
                 }
