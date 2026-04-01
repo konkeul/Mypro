@@ -18,6 +18,7 @@
         --rate-bg: rgba(143, 211, 244, 0.05);
         --rate-border: rgba(143, 211, 244, 0.1);
         --comment-bg: rgba(0, 0, 0, 0.2);
+        --accent: #00c6ff;
     }
 
     [data-theme="light"] {
@@ -50,70 +51,33 @@
     }
 
     .theme-toggle {
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        background: var(--card-bg);
-        border: 1px solid var(--input-border);
-        color: var(--text-main);
-        padding: 10px 18px;
-        border-radius: 30px;
-        cursor: pointer;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        z-index: 1000;
-        transition: all 0.2s;
-        backdrop-filter: blur(10px);
+        position: fixed; bottom: 25px; right: 25px;
+        background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main);
+        padding: 10px 18px; border-radius: 30px; cursor: pointer; font-size: 13px;
+        display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        z-index: 1000; transition: all 0.2s; backdrop-filter: blur(10px);
     }
-
     .theme-toggle:active { transform: scale(0.95); }
 
     .card {
-        width: 100%;
-        max-width: 420px;
-        padding: 30px;
-        border-radius: 28px;
-        background: var(--card-bg);
-        backdrop-filter: blur(15px);
-        border: 1px solid var(--input-border);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.2);
-        box-sizing: border-box;
+        width: 100%; max-width: 420px; padding: 30px; border-radius: 28px;
+        background: var(--card-bg); backdrop-filter: blur(15px); border: 1px solid var(--input-border);
+        box-shadow: 0 25px 60px rgba(0,0,0,0.2); box-sizing: border-box;
     }
 
     .title {
-        font-size: 28px;
-        font-weight: 800;
-        margin-bottom: 10px;
-        text-align: center;
-        background: linear-gradient(90deg, #6a5cff, #00c6ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-size: 28px; font-weight: 800; margin-bottom: 10px; text-align: center;
+        background: linear-gradient(90deg, #6a5cff, var(--accent));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
-    .desc {
-        font-size: 15px;
-        color: var(--text-desc);
-        margin-bottom: 25px;
-        text-align: center;
-    }
+    .desc { font-size: 15px; color: var(--text-desc); margin-bottom: 25px; text-align: center; }
 
     .status-badge {
-        display: inline-block;
-        font-size: 12px;
-        padding: 6px 15px;
-        border-radius: 20px;
-        margin-bottom: 30px;
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981 !important;
-        font-weight: bold;
-        cursor: pointer;
-        border: 1px solid rgba(16, 185, 129, 0.2);
-        transition: all 0.2s;
+        display: inline-block; font-size: 12px; padding: 6px 15px; border-radius: 20px;
+        margin-bottom: 30px; background: rgba(16, 185, 129, 0.1); color: #10b981 !important;
+        font-weight: bold; cursor: pointer; border: 1px solid rgba(16, 185, 129, 0.2); transition: all 0.2s;
     }
-
     .status-badge:active { transform: scale(0.95); background: rgba(16, 185, 129, 0.2); }
 
     .input-group { margin-bottom: 24px; }
@@ -121,139 +85,70 @@
     label { font-size: 14px; color: var(--text-desc); font-weight: 600; }
 
     select {
-        background: var(--tab-bg);
-        border: 1px solid var(--input-border);
-        color: var(--text-main);
-        padding: 6px 10px;
-        border-radius: 10px;
-        font-size: 13px;
-        outline: none;
-        cursor: pointer;
+        background: var(--tab-bg); border: 1px solid var(--input-border); color: var(--text-main);
+        padding: 6px 10px; border-radius: 10px; font-size: 13px; outline: none; cursor: pointer;
     }
 
-    option { background-color: #1e2a44; color: white; }
-    body[data-theme="light"] option { background-color: white; color: black; }
-
     .input-wrapper { position: relative; display: flex; align-items: center; }
-
     .calc-input {
-        width: 100%;
-        padding: 16px 20px 16px 45px;
-        border-radius: 16px;
-        border: 1px solid var(--input-border);
-        background: var(--input-bg);
-        color: var(--text-main);
-        font-size: 22px;
-        font-weight: 600;
-        outline: none;
-        box-sizing: border-box;
-        transition: all 0.3s;
+        width: 100%; padding: 16px 20px 16px 45px; border-radius: 16px;
+        border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main);
+        font-size: 22px; font-weight: 600; outline: none; box-sizing: border-box; transition: all 0.3s;
     }
 
     .currency-symbol {
-        position: absolute;
-        left: 18px;
-        color: #00c6ff;
-        font-weight: bold;
-        font-size: 18px;
-        pointer-events: none;
+        position: absolute; left: 18px; color: var(--accent);
+        font-weight: bold; font-size: 18px; pointer-events: none;
     }
 
-    .slider-container {
-        margin-top: 15px;
-        padding: 0 5px;
-    }
-
+    .slider-container { margin-top: 15px; padding: 0 5px; }
     .calc-slider {
-        -webkit-appearance: none;
-        width: 100%;
-        height: 6px;
-        border-radius: 5px;
-        background: var(--input-border);
-        outline: none;
-        cursor: pointer;
-        transition: all 0.2s;
+        -webkit-appearance: none; width: 100%; height: 6px; border-radius: 5px;
+        background: var(--input-border); outline: none; cursor: pointer;
     }
-
     .calc-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #00c6ff;
-        cursor: pointer;
-        box-shadow: 0 0 10px rgba(0, 198, 255, 0.4);
-        transition: transform 0.2s;
+        -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+        background: var(--accent); cursor: pointer; box-shadow: 0 0 10px rgba(0, 198, 255, 0.4);
     }
 
-    .calc-slider::-webkit-slider-thumb:active {
-        transform: scale(1.3);
-    }
-
-    .divider-container {
-        text-align: center;
-        position: relative;
-        margin: 10px 0 20px 0;
+    .divider-container { text-align: center; position: relative; margin: 10px 0 20px 0; }
+    .divider-line { position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--input-border); z-index: 1; }
+    .divider-text {
+        position: relative; z-index: 2; background: var(--card-bg); padding: 5px 15px;
+        border-radius: 20px; border: 1px solid var(--input-border); color: var(--accent);
+        font-size: 14px; font-weight: bold; backdrop-filter: blur(10px);
     }
 
     .rate-info {
-        margin-top: 15px;
-        padding: 20px;
-        border-radius: 18px;
-        background: var(--rate-bg);
-        border: 1px solid var(--rate-border);
-        text-align: center;
+        margin-top: 15px; padding: 20px; border-radius: 18px;
+        background: var(--rate-bg); border: 1px solid var(--rate-border); text-align: center;
     }
 
-    .tab-container {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 25px;
-        width: 100%;
-        max-width: 420px;
-    }
-
+    .tab-container { display: flex; gap: 10px; margin-bottom: 25px; width: 100%; max-width: 420px; }
     .tab-btn {
-        flex: 1;
-        padding: 12px;
-        border-radius: 12px;
-        border: 1px solid var(--input-border);
-        background: var(--tab-bg);
-        color: var(--tab-text);
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: center;
-        text-decoration: none;
+        flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--input-border);
+        background: var(--tab-bg); color: var(--tab-text); font-size: 15px; font-weight: 600;
+        cursor: pointer; transition: all 0.2s; text-align: center; text-decoration: none;
     }
-
-    .tab-btn:active { transform: scale(0.95); }
-    .tab-btn.active {
-        background: rgba(0, 198, 255, 0.2);
-        color: #00c6ff;
-        border-color: #00c6ff;
-    }
+    .tab-btn.active { background: rgba(0, 198, 255, 0.2); color: var(--accent); border-color: var(--accent); }
 
     .tab-content { display: none; width: 100%; max-width: 420px; }
     .tab-content.active { display: block; }
 
-    .comment-list { display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; }
+    .comment-list { display: flex; flex-direction: column; gap: 12px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
     .comment-item { padding: 12px; border-radius: 12px; background: var(--comment-bg); border: 1px solid var(--input-border); }
 
     .main-btn {
         width: 100%; padding: 16px; border-radius: 12px; border: none;
         font-size: 16px; font-weight: bold; color: white; cursor: pointer;
-        background: linear-gradient(90deg, #6a5cff, #00c6ff);
-        transition: all 0.2s;
+        background: linear-gradient(90deg, #6a5cff, var(--accent)); transition: all 0.2s;
     }
     .main-btn:active { transform: scale(0.98); opacity: 0.9; }
 </style>
 </head>
 <body>
 
-<button class="theme-toggle" onclick="toggleTheme()">
+<button class="theme-toggle" id="themeToggle">
     <span id="theme-icon">🌙</span> <span id="theme-text">다크 모드</span>
 </button>
 
@@ -268,7 +163,7 @@
         <div class="title">🌍 글로벌 환율 계산기</div>
         <div class="desc">실시간 금융 데이터 기반 자동 계산</div>
         <div style="text-align: center;">
-            <div id="status" class="status-badge" onclick="fetchRates()">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
+            <div id="status" class="status-badge">● 실시간 환율 연결됨 (클릭하여 갱신)</div>
         </div>
         <div class="input-group">
             <div class="label-row">
@@ -290,8 +185,8 @@
             </div>
         </div>
         <div class="divider-container">
-            <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--input-border); z-index: 1;"></div>
-            <span style="position: relative; z-index: 2; background: var(--card-bg); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--input-border); color: #00c6ff; font-size: 14px; font-weight: bold;">환산 결과</span>
+            <div class="divider-line"></div>
+            <span class="divider-text">환산 결과</span>
         </div>
         <div class="input-group">
             <div class="label-row"><label>대한민국 원 (KRW)</label></div>
@@ -305,7 +200,7 @@
         </div>
         <div class="rate-info">
             <div id="currentRateText" style="font-weight: 600; margin-bottom: 5px; font-size: 16px;">환율 정보를 불러오는 중...</div>
-            <div id="lastUpdateTime" style="font-size: 12px; color: var(--text-desc); display: inline-block;">업데이트 확인 중</div>
+            <div id="lastUpdateTime" style="font-size: 12px; color: var(--text-desc);">업데이트 확인 중</div>
         </div>
     </div>
 </div>
@@ -314,8 +209,8 @@
     <div class="card">
         <div class="title" style="font-size: 22px;">🤝 제휴 문의</div>
         <form action="https://formspree.io/f/xdapzkgo" method="POST" style="display: flex; flex-direction: column; gap: 15px;">
-            <input type="text" name="name" placeholder="성함 또는 업체명" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
-            <input type="email" name="_replyto" placeholder="이메일 주소" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
+            <input type="text" name="name" placeholder="성함 또는 업체명" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); font-size:15px; box-sizing:border-box;">
+            <input type="email" name="_replyto" placeholder="이메일 주소" required style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); font-size:15px; box-sizing:border-box;">
             <textarea name="message" placeholder="문의 내용" required style="height: 120px; padding: 14px; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-main); font-family: inherit; font-size:15px; outline: none; resize: none; box-sizing:border-box;"></textarea>
             <button type="submit" class="main-btn">문의 보내기</button>
         </form>
@@ -326,9 +221,9 @@
     <div class="card">
         <div class="title" style="font-size: 22px; margin-bottom: 15px;">💬 실시간 댓글</div>
         <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:25px;">
-            <input type="text" id="commentUser" placeholder="닉네임" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); box-sizing:border-box; font-size:15px;">
-            <textarea id="commentInput" placeholder="댓글을 입력하세요..." style="height: 90px; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); resize:none; box-sizing:border-box; font-size:15px;"></textarea>
-            <button onclick="addComment()" class="main-btn">댓글 달기</button>
+            <input type="text" id="commentUser" placeholder="닉네임" style="width:100%; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); font-size:15px; box-sizing:border-box;">
+            <textarea id="commentInput" placeholder="댓글을 입력하세요..." style="height: 90px; padding:14px; border-radius:12px; border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-main); resize:none; font-size:15px; box-sizing:border-box;"></textarea>
+            <button id="addCommentBtn" class="main-btn">댓글 달기</button>
         </div>
         <div id="commentList" class="comment-list"></div>
     </div>
@@ -339,132 +234,91 @@
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1Ym9hZHJ2bWNyc2Z4dXRqbWlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDcxODUsImV4cCI6MjA5MDUyMzE4NX0.aFisTHVpvqmEjiFuN1a4sWMKz1zL7W99fT9Blco72Zs';
     const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    const foreignInput = document.getElementById('foreignInput');
-    const krwInput = document.getElementById('krwInput');
-    const foreignSlider = document.getElementById('foreignSlider');
-    const krwSlider = document.getElementById('krwSlider');
-    const currencySelect = document.getElementById('currencySelect');
-    const foreignSymbol = document.getElementById('foreignSymbol');
-    const currentRateText = document.getElementById('currentRateText');
-    const lastUpdateTime = document.getElementById('lastUpdateTime');
+    const elements = {
+        foreignInput: document.getElementById('foreignInput'),
+        krwInput: document.getElementById('krwInput'),
+        foreignSlider: document.getElementById('foreignSlider'),
+        krwSlider: document.getElementById('krwSlider'),
+        currencySelect: document.getElementById('currencySelect'),
+        foreignSymbol: document.getElementById('foreignSymbol'),
+        currentRateText: document.getElementById('currentRateText'),
+        lastUpdateTime: document.getElementById('lastUpdateTime'),
+        themeIcon: document.getElementById('theme-icon'),
+        themeText: document.getElementById('theme-text'),
+        commentUser: document.getElementById('commentUser'),
+        commentInput: document.getElementById('commentInput'),
+        commentList: document.getElementById('commentList')
+    };
 
     let rates = {};
     const symbols = {'USD':'$','JPY':'¥','EUR':'€','CNY':'¥','GBP':'£'};
 
-    function formatNumber(val) {
-        if (!val && val !== 0) return '';
-        let str = val.toString().replace(/,/g, '');
-        let parts = str.split('.');
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        return parts.join('.');
-    }
+    const format = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const unformat = (s) => s.toString().replace(/,/g, '');
 
-    function unformatNumber(val) { return val.toString().replace(/,/g, ''); }
-
-    // 라우팅 처리 함수
     function handleRouting() {
         const hash = window.location.hash || '#calculator';
         const tabId = hash.substring(1);
         
-        const contents = document.getElementsByClassName('tab-content');
-        const buttons = document.getElementsByClassName('tab-btn');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tabId));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'btn-' + tabId));
         
-        // 모든 탭 숨기기
-        for (let c of contents) c.classList.remove('active');
-        for (let b of buttons) b.classList.remove('active');
-        
-        // 해당 탭 보이기
-        const targetTab = document.getElementById(tabId);
-        const targetBtn = document.getElementById('btn-' + tabId);
-        
-        if (targetTab && targetBtn) {
-            targetTab.classList.add('active');
-            targetBtn.classList.add('active');
-        } else {
-            // 잘못된 해시인 경우 기본값으로 리다이렉트
-            window.location.hash = '#calculator';
-        }
-    }
-
-    window.addEventListener('hashchange', handleRouting);
-
-    function toggleTheme() {
-        const body = document.body;
-        const icon = document.getElementById('theme-icon');
-        const text = document.getElementById('theme-text');
-        if (body.getAttribute('data-theme') === 'light') {
-            body.removeAttribute('data-theme');
-            icon.innerText = '🌙'; text.innerText = '다크 모드';
-            localStorage.setItem('theme', 'dark');
-        } else {
-            body.setAttribute('data-theme', 'light');
-            icon.innerText = '☀️'; text.innerText = '라이트 모드';
-            localStorage.setItem('theme', 'light');
-        }
+        if (!document.getElementById(tabId)) window.location.hash = '#calculator';
     }
 
     async function fetchRates() {
-        const timeEl = document.getElementById('lastUpdateTime');
         try {
             const response = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=KRW');
             const data = await response.json();
-            if (data && data.data && data.data.rates) {
+            if (data?.data?.rates) {
                 const r = data.data.rates;
                 rates = {'USD': 1/r.USD, 'JPY': 1/r.JPY, 'EUR': 1/r.EUR, 'CNY': 1/r.CNY, 'GBP': 1/r.GBP};
-                timeEl.innerText = `마지막 확인: ${new Date().toLocaleTimeString()} (실시간)`;
+                elements.lastUpdateTime.innerText = `마지막 확인: ${new Date().toLocaleTimeString()} (실시간)`;
                 updateCalculation();
             }
-        } catch (e) { currentRateText.innerText = '환율 로드 오류'; }
+        } catch (e) { elements.currentRateText.innerText = '환율 로드 오류'; }
     }
 
     function updateCalculation(source) {
-        const currency = currencySelect.value;
+        const currency = elements.currencySelect.value;
         if (!rates[currency]) return;
         const rateToKrw = rates[currency];
-        foreignSymbol.innerText = symbols[currency];
+        elements.foreignSymbol.innerText = symbols[currency];
+        
         let displayRate = rateToKrw;
         let prefix = "1";
-        
-        if (currency === 'JPY') { 
-            displayRate = rateToKrw * 100; prefix = "100";
-            foreignSlider.max = 500000;
-            foreignSlider.step = 100;
-        } else if (currency === 'CNY') {
-            foreignSlider.max = 50000;
-            foreignSlider.step = 10;
-        } else {
-            foreignSlider.max = 10000;
-            foreignSlider.step = 1;
-        }
-        
-        currentRateText.innerText = `현재 환율: ${prefix} ${currency} = ${formatNumber(displayRate.toFixed(2))} KRW`;
+        if (currency === 'JPY') { displayRate = rateToKrw * 100; prefix = "100"; }
+        elements.currentRateText.innerText = `현재 환율: ${prefix} ${currency} = ${format(displayRate.toFixed(2))} KRW`;
+
+        // 슬라이더 범위 최적화
+        if (currency === 'JPY') { elements.foreignSlider.max = 500000; elements.foreignSlider.step = 100; }
+        else if (currency === 'CNY') { elements.foreignSlider.max = 50000; elements.foreignSlider.step = 10; }
+        else { elements.foreignSlider.max = 10000; elements.foreignSlider.step = 1; }
 
         if (source === 'foreign') {
-            const val = parseFloat(unformatNumber(foreignInput.value)) || 0;
-            krwInput.value = formatNumber(Math.round(val * rateToKrw));
-            foreignSlider.value = val;
-            krwSlider.value = Math.round(val * rateToKrw);
+            const val = parseFloat(unformat(elements.foreignInput.value)) || 0;
+            elements.krwInput.value = format(Math.round(val * rateToKrw));
+            elements.foreignSlider.value = val;
+            elements.krwSlider.value = Math.round(val * rateToKrw);
         } else if (source === 'krw') {
-            const val = parseFloat(unformatNumber(krwInput.value)) || 0;
+            const val = parseFloat(unformat(elements.krwInput.value)) || 0;
             const fVal = (val / rateToKrw).toFixed(2);
-            foreignInput.value = formatNumber(fVal);
-            krwSlider.value = val;
-            foreignSlider.value = fVal;
+            elements.foreignInput.value = format(fVal);
+            elements.krwSlider.value = val;
+            elements.foreignSlider.value = fVal;
         } else {
-            if (currency === 'JPY') foreignInput.value = "100";
-            else foreignInput.value = "1";
-            const fVal = parseFloat(unformatNumber(foreignInput.value));
-            krwInput.value = formatNumber(Math.round(fVal * rateToKrw));
-            foreignSlider.value = fVal;
-            krwSlider.value = Math.round(fVal * rateToKrw);
+            elements.foreignInput.value = currency === 'JPY' ? "100" : "1";
+            const fVal = parseFloat(unformat(elements.foreignInput.value));
+            elements.krwInput.value = format(Math.round(fVal * rateToKrw));
+            elements.foreignSlider.value = fVal;
+            elements.krwSlider.value = Math.round(fVal * rateToKrw);
         }
     }
 
     async function loadComments() {
-        const { data, error } = await _supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
-        if (error) return;
-        const list = document.getElementById('commentList');
-        list.innerHTML = data.map(c => `
+        const { data } = await _supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
+        if (!data) return;
+        elements.commentList.innerHTML = data.map(c => `
             <div class="comment-item" style="margin-bottom: 10px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                     <span style="font-weight:bold; color:#00c6ff;">${c.user}</span>
@@ -476,28 +330,46 @@
     }
 
     async function addComment() {
-        const user = document.getElementById('commentUser').value.trim() || '익명';
-        const text = document.getElementById('commentInput').value.trim();
+        const user = elements.commentUser.value.trim() || '익명';
+        const text = elements.commentInput.value.trim();
         if (!text) return alert('내용을 입력해주세요!');
-        const { error } = await _supabase.from('comments').insert([{ user: user, text: text }]);
+        const { error } = await _supabase.from('comments').insert([{ user, text }]);
         if (error) alert('오류: ' + error.message);
-        else { document.getElementById('commentInput').value = ''; loadComments(); }
+        else { elements.commentInput.value = ''; loadComments(); }
     }
 
-    currencySelect.addEventListener('change', () => updateCalculation());
-    foreignInput.addEventListener('input', () => updateCalculation('foreign'));
-    krwInput.addEventListener('input', () => updateCalculation('krw'));
-    foreignSlider.addEventListener('input', (e) => { foreignInput.value = formatNumber(e.target.value); updateCalculation('foreign'); });
-    krwSlider.addEventListener('input', (e) => { krwInput.value = formatNumber(e.target.value); updateCalculation('krw'); });
+    function toggleTheme() {
+        const isLight = document.body.getAttribute('data-theme') === 'light';
+        if (isLight) {
+            document.body.removeAttribute('data-theme');
+            elements.themeIcon.innerText = '🌙'; elements.themeText.innerText = '다크 모드';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            elements.themeIcon.innerText = '☀️'; elements.themeText.innerText = '라이트 모드';
+            localStorage.setItem('theme', 'light');
+        }
+    }
+
+    // 이벤트 리스너 통합 설정
+    window.addEventListener('hashchange', handleRouting);
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    document.getElementById('status').addEventListener('click', fetchRates);
+    document.getElementById('addCommentBtn').addEventListener('click', addComment);
+    
+    elements.currencySelect.addEventListener('change', () => updateCalculation());
+    elements.foreignInput.addEventListener('input', () => updateCalculation('foreign'));
+    elements.krwInput.addEventListener('input', () => updateCalculation('krw'));
+    elements.foreignSlider.addEventListener('input', (e) => { elements.foreignInput.value = format(e.target.value); updateCalculation('foreign'); });
+    elements.krwSlider.addEventListener('input', (e) => { elements.krwInput.value = format(e.target.value); updateCalculation('krw'); });
 
     window.onload = () => {
-        if (localStorage.getItem('theme') === 'light') {
-            document.body.setAttribute('data-theme', 'light');
-            document.getElementById('theme-icon').innerText = '☀️';
-            document.getElementById('theme-text').innerText = '라이트 모드';
-        }
-        handleRouting(); // 초기 라우팅 처리
-        fetchRates(); loadComments();
+        if (localStorage.getItem('theme') === 'light') toggleTheme();
+        handleRouting();
+        fetchRates();
+        loadComments();
+        // 실시간 댓글 구독
+        _supabase.channel('realtime-comments').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, loadComments).subscribe();
     };
 </script>
 </body>
