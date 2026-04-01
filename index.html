@@ -392,79 +392,104 @@
         else { elements.commentInput.value = ''; loadComments(); }
     }
 
-    function searchStock() {
-        const query = document.getElementById('stockSearch').value.trim();
-        if (!query) return alert('검색할 종목명을 입력해주세요!');
-        
-        // 종목 코드가 숫자로만 되어 있으면 .KS(코스피)를 붙여줍니다 (간이 로직)
-        const symbol = /^\d+$/.test(query) ? `${query}.KS` : query;
-        updateStockInfo(symbol, 'search');
-    }
-
-    async function updateStockInfo(symbol, type = 'popular') {
+    // 공통 데이터 페치 함수
+    async function fetchStockData(symbol) {
         const proxyUrl = 'https://api.allorigins.win/get?url=';
         const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`);
         
-        try {
-            const response = await fetch(`${proxyUrl}${targetUrl}`);
-            const json = await response.json();
-            const data = JSON.parse(json.contents);
-            
-            if (!data.chart.result) throw new Error('종목을 찾을 수 없습니다.');
-            
-            const result = data.chart.result[0];
-            const meta = result.meta;
-            const price = meta.regularMarketPrice;
-            const prevClose = meta.previousClose;
-            const change = price - prevClose;
-            const changePercent = ((change / prevClose) * 100).toFixed(2);
-            const isUp = change >= 0;
+        const response = await fetch(`${proxyUrl}${targetUrl}`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const json = await response.json();
+        const data = JSON.parse(json.contents);
+        
+        if (!data.chart.result) throw new Error('No data found');
+        return data.chart.result[0].meta;
+    }
 
-            if (type === 'search') {
-                alert(`[${meta.symbol}] 현재가: ${format(price.toFixed(0))}원 (${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%)`);
-            } else if (type === 'recommend') {
-                document.getElementById('recommendStockName').innerText = meta.symbol === '005930.KS' ? '삼성전자' : meta.symbol;
+    async function searchStock() {
+        const btn = document.querySelector('button[onclick="searchStock()"]');
+        const query = document.getElementById('stockSearch').value.trim();
+        if (!query) return alert('검색할 종목명을 입력해주세요!');
+        
+        const originalText = btn.innerText;
+        btn.innerText = '검색 중...';
+        btn.disabled = true;
+
+        try {
+            let symbol = /^\d+$/.test(query) ? `${query}.KS` : query;
+            let meta;
+            
+            try {
+                meta = await fetchStockData(symbol);
+            } catch (e) {
+                // 코스피에서 실패 시 코스닥(.KQ)으로 재시도
+                if (symbol.endsWith('.KS')) {
+                    symbol = symbol.replace('.KS', '.KQ');
+                    meta = await fetchStockData(symbol);
+                } else { throw e; }
+            }
+
+            const price = meta.regularMarketPrice;
+            const changePercent = (((price - meta.previousClose) / meta.previousClose) * 100).toFixed(2);
+            const isUp = changePercent >= 0;
+            alert(`[${meta.symbol}] 현재가: ${format(price.toFixed(0))}원 (${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%)`);
+        } catch (e) {
+            alert('종목 정보를 가져오는데 실패했습니다. 종목코드 6자리를 확인해주세요. (예: 005930)');
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function updateStockInfo(symbol, type = 'recommend') {
+        try {
+            const meta = await fetchStockData(symbol);
+            const price = meta.regularMarketPrice;
+            const changePercent = (((price - meta.previousClose) / meta.previousClose) * 100).toFixed(2);
+            const isUp = changePercent >= 0;
+
+            if (type === 'recommend') {
+                document.getElementById('recommendStockName').innerText = symbol === '005930.KS' ? '삼성전자' : meta.symbol;
                 document.getElementById('recommendStockPrice').innerText = `${format(price.toFixed(0))}원`;
                 document.getElementById('recommendStockChange').innerText = `${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%`;
                 document.getElementById('recommendStockChange').style.color = isUp ? '#ff4d4d' : '#4d94ff';
             }
-        } catch (e) {
-            if (type === 'search') alert('종목 정보를 가져오는데 실패했습니다. (예: 005930)');
-            console.error(e);
-        }
+        } catch (e) { console.error('UpdateStockInfo Error:', e); }
     }
 
     async function loadPopularStocks() {
-        const popularSymbols = ['005930.KS', '000660.KS', '005380.KS']; // 삼성전자, SK하이닉스, 현대차
+        const popularSymbols = ['005930.KS', '000660.KS', '005380.KS', '035420.KS', '035720.KS'];
+        const names = {'005930.KS':'삼성전자', '000660.KS':'SK하이닉스', '005380.KS':'현대차', '035420.KS':'NAVER', '035720.KS':'카카오'};
         const listContainer = document.getElementById('popularStocks');
-        listContainer.innerHTML = '<div style="text-align:center; padding:10px;">데이터 로드 중...</div>';
+        
+        listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-desc);">🚀 실시간 데이터 불러오는 중...</div>';
 
-        let html = '';
-        for (let i = 0; i < popularSymbols.length; i++) {
-            const symbol = popularSymbols[i];
-            const proxyUrl = 'https://api.allorigins.win/get?url=';
-            const targetUrl = encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`);
+        try {
+            // 모든 종목을 병렬로 동시에 요청 (속도 개선 핵심)
+            const results = await Promise.allSettled(popularSymbols.map(s => fetchStockData(s)));
             
-            try {
-                const res = await fetch(`${proxyUrl}${targetUrl}`);
-                const json = await res.json();
-                const data = JSON.parse(json.contents);
-                const meta = data.chart.result[0].meta;
-                const price = meta.regularMarketPrice;
-                const change = price - meta.previousClose;
-                const changePercent = ((change / meta.previousClose) * 100).toFixed(2);
-                const isUp = change >= 0;
-                const name = symbol === '005930.KS' ? '삼성전자' : symbol === '000660.KS' ? 'SK하이닉스' : '현대차';
+            let html = '';
+            results.forEach((result, i) => {
+                if (result.status === 'fulfilled') {
+                    const meta = result.value;
+                    const symbol = popularSymbols[i];
+                    const price = meta.regularMarketPrice;
+                    const changePercent = (((price - meta.previousClose) / meta.previousClose) * 100).toFixed(2);
+                    const isUp = changePercent >= 0;
+                    const name = names[symbol] || symbol;
 
-                html += `
-                    <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
-                        <span>${i+1}. ${name}</span>
-                        <span style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: 600;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</span>
-                    </div>
-                `;
-            } catch (e) { continue; }
+                    html += `
+                        <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;">
+                            <span style="font-weight:500;">${i+1}. ${name}</span>
+                            <span style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: 700;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</span>
+                        </div>
+                    `;
+                }
+            });
+            listContainer.innerHTML = html || '<div style="text-align:center; padding:10px;">데이터를 불러올 수 없습니다.</div>';
+        } catch (e) {
+            listContainer.innerHTML = '<div style="text-align:center; padding:10px;">로딩 오류가 발생했습니다.</div>';
         }
-        listContainer.innerHTML = html || '데이터를 불러올 수 없습니다.';
     }
 
     function toggleTheme() {
