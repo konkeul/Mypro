@@ -436,78 +436,41 @@
         else { elements.commentInput.value = ''; loadComments(); }
     }
 
-    // CORS 프록시 목록 (순차 시도)
-    const PROXIES = [
-        url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-        url => `https://api.codetabs.com/v1/proxy?quest=${url}`,
-    ];
+    // ================================================
+    // Finnhub API 설정
+    // 무료 키 발급: https://finnhub.io → Sign up → Dashboard
+    // ================================================
+    const FINNHUB_API_KEY = 'YOUR_API_KEY_HERE';
 
-    async function tryFetch(proxyUrl, timeout) {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
-        try {
-            const res = await fetch(proxyUrl, { signal: controller.signal });
-            clearTimeout(id);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return await res.json();
-        } catch (e) {
-            clearTimeout(id);
-            throw e;
+    async function fetchStockData(symbol) {
+        if (FINNHUB_API_KEY === 'YOUR_API_KEY_HERE') {
+            throw new Error('API 키 미설정');
         }
+        const res = await fetch(
+            `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        // c === 0 이면 해당 심볼 데이터 없음
+        if (!data.c || data.c === 0) throw new Error(`${symbol}: 데이터 없음`);
+        const isKorean = symbol.endsWith('.KS') || symbol.endsWith('.KQ');
+        return {
+            symbol,
+            regularMarketPrice: data.c,
+            regularMarketChangePercent: data.dp || 0,
+            currency: isKorean ? 'KRW' : 'USD',
+            shortName: symbol,
+        };
     }
 
-    // Yahoo Finance v7 Quote API (가벼운 엔드포인트)
-    async function fetchQuoteV7(symbol, timeout = 7000) {
-        const target = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${symbol}&fields=regularMarketPrice,regularMarketChangePercent,currency,shortName`;
-        for (const makeProxy of PROXIES) {
-            try {
-                const data = await tryFetch(makeProxy(target), timeout);
-                const result = data?.quoteResponse?.result?.[0];
-                if (result?.regularMarketPrice) return {
-                    symbol: result.symbol,
-                    regularMarketPrice: result.regularMarketPrice,
-                    regularMarketChangePercent: result.regularMarketChangePercent || 0,
-                    currency: result.currency || 'KRW',
-                    shortName: result.shortName || result.symbol,
-                };
-            } catch (e) {
-                console.warn(`v7 프록시 실패:`, e.message);
-            }
-        }
-        return null;
-    }
-
-    // Yahoo Finance v8 Chart API (폴백)
-    async function fetchChartV8(symbol, timeout = 7000) {
-        const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-        for (const makeProxy of PROXIES) {
-            try {
-                const data = await tryFetch(makeProxy(target), timeout);
-                const meta = data?.chart?.result?.[0]?.meta;
-                if (meta?.regularMarketPrice) {
-                    const prev = meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice;
-                    const changePct = ((meta.regularMarketPrice - prev) / prev) * 100;
-                    return {
-                        symbol: meta.symbol,
-                        regularMarketPrice: meta.regularMarketPrice,
-                        regularMarketChangePercent: changePct,
-                        currency: meta.currency || 'KRW',
-                        shortName: meta.symbol,
-                    };
-                }
-            } catch (e) {
-                console.warn(`v8 프록시 실패:`, e.message);
-            }
-        }
-        return null;
-    }
-
-    async function fetchStockData(symbol, timeout = 7000) {
-        // v7 먼저 시도 → 실패 시 v8 폴백
-        const result = await fetchQuoteV7(symbol, timeout) || await fetchChartV8(symbol, timeout);
-        if (!result) throw new Error(`${symbol} 데이터 로드 실패`);
-        return result;
+    async function searchStockName(query) {
+        // Finnhub 심볼 검색으로 종목명 조회
+        const res = await fetch(
+            `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data?.result?.[0] || null;
     }
 
     async function searchStock() {
@@ -524,23 +487,26 @@
         resultArea.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:14px;">🔎 데이터를 찾는 중...</div>';
 
         try {
+            if (FINNHUB_API_KEY === 'YOUR_API_KEY_HERE') {
+                throw new Error('NO_KEY');
+            }
+
             let meta = null;
             if (/^\d{6}$/.test(query)) {
-                // 한국 주식: 코스피/코스닥 순차적 또는 병렬 시도
-                const symbols = [`${query}.KS`, `${query}.KQ`];
-                // 더 안전한 순차적 시도 (병렬 실패 대비)
-                for (const s of symbols) {
-                    try {
-                        meta = await fetchStockData(s, 5000);
-                        if (meta) break;
-                    } catch (e) { continue; }
+                // 한국 주식: KOSPI → KOSDAQ 순서로 시도
+                for (const s of [`${query}.KS`, `${query}.KQ`]) {
+                    try { meta = await fetchStockData(s); if (meta) break; }
+                    catch (e) { continue; }
                 }
             } else {
-                // 미국 주식 등 일반 티커
                 meta = await fetchStockData(query);
             }
 
             if (!meta) throw new Error('종목을 찾을 수 없습니다.');
+
+            // 종목명 조회 (검색 API 병렬 요청)
+            const nameInfo = await searchStockName(query).catch(() => null);
+            const stockName = nameInfo?.description || meta.symbol;
 
             const price = meta.regularMarketPrice;
             const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
@@ -550,7 +516,6 @@
             const priceStr = currency === 'KRW'
                 ? `${format(price.toFixed(0))}원`
                 : `${currency} ${format(price.toFixed(2))}`;
-            const stockName = meta.shortName || meta.symbol;
 
             resultArea.innerHTML = `
                 <div class="comment-item" style="border: 2px solid var(--accent); background: rgba(0, 198, 255, 0.05); padding: 15px;">
@@ -567,13 +532,16 @@
                 </div>
             `;
         } catch (e) {
+            const isNoKey = e.message === 'NO_KEY';
             resultArea.innerHTML = `
                 <div class="comment-item" style="border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.05); padding: 15px;">
-                    <div style="color: #ff4d4d; font-weight: bold; margin-bottom: 8px;">❌ 검색 결과가 없습니다.</div>
-                    <div style="font-size: 13px; color: var(--text-desc); line-height: 1.5;">
-                        • 네트워크 상태를 확인해 주세요.<br>
-                        • 한국 주식 코드 6자리를 정확히 입력해 주세요. (예: 005930)<br>
-                        • 현재 API 연결이 원활하지 않을 수 있습니다. 잠시 후 다시 시도해 주세요.
+                    <div style="color: #ff4d4d; font-weight: bold; margin-bottom: 8px;">
+                        ${isNoKey ? '⚙️ API 키를 설정해주세요.' : '❌ 검색 결과가 없습니다.'}
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-desc); line-height: 1.6;">
+                        ${isNoKey
+                            ? 'index.html 내 <b>FINNHUB_API_KEY</b> 값을 발급받은 키로 교체하세요.<br>무료 발급: <a href="https://finnhub.io" target="_blank" style="color:var(--accent);">finnhub.io</a>'
+                            : '• 한국 주식: 종목코드 6자리 입력 (예: 005930)<br>• 미국 주식: 티커 입력 (예: AAPL, TSLA)<br>• 종목코드를 정확히 입력했는지 확인해주세요.'}
                     </div>
                 </div>
             `;
@@ -609,6 +577,14 @@
         const names = {'005930.KS':'삼성전자', '000660.KS':'SK하이닉스', '005380.KS':'현대차', '035420.KS':'NAVER', '035720.KS':'카카오'};
         const listContainer = document.getElementById('popularStocks');
         
+        if (FINNHUB_API_KEY === 'YOUR_API_KEY_HERE') {
+            listContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:13px; line-height:1.8;">
+                ⚙️ API 키를 설정하면 실시간 데이터가 표시됩니다.<br>
+                <a href="https://finnhub.io" target="_blank" style="color:var(--accent);">finnhub.io</a>에서 무료로 발급 후 코드 내 FINNHUB_API_KEY에 입력하세요.
+            </div>`;
+            return;
+        }
+
         listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-desc);">🚀 실시간 데이터 불러오는 중...</div>';
 
         try {
