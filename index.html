@@ -436,38 +436,78 @@
         else { elements.commentInput.value = ''; loadComments(); }
     }
 
-    // 다중 프록시 폴백으로 Yahoo Finance 데이터 페치
+    // CORS 프록시 목록 (순차 시도)
     const PROXIES = [
-        url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
         url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        url => `https://thingproxy.freeboard.io/fetch/${url}`,
+        url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        url => `https://api.codetabs.com/v1/proxy?quest=${url}`,
     ];
 
-    async function fetchWithProxy(targetUrl, timeout = 8000) {
-        for (const makeProxy of PROXIES) {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), timeout);
-            try {
-                const response = await fetch(makeProxy(targetUrl), {
-                    signal: controller.signal,
-                    headers: { 'Accept': 'application/json' }
-                });
-                clearTimeout(id);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                if (!data?.chart?.result?.[0]) throw new Error('데이터 없음');
-                return data.chart.result[0].meta;
-            } catch (e) {
-                clearTimeout(id);
-                console.warn(`프록시 실패(${makeProxy(targetUrl).split('?')[0]}):`, e.message);
-            }
+    async function tryFetch(proxyUrl, timeout) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const res = await fetch(proxyUrl, { signal: controller.signal });
+            clearTimeout(id);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } catch (e) {
+            clearTimeout(id);
+            throw e;
         }
-        throw new Error('모든 프록시 연결 실패');
     }
 
-    async function fetchStockData(symbol, timeout = 8000) {
-        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-        return fetchWithProxy(targetUrl, timeout);
+    // Yahoo Finance v7 Quote API (가벼운 엔드포인트)
+    async function fetchQuoteV7(symbol, timeout = 7000) {
+        const target = `https://query2.finance.yahoo.com/v7/finance/quote?symbols=${symbol}&fields=regularMarketPrice,regularMarketChangePercent,currency,shortName`;
+        for (const makeProxy of PROXIES) {
+            try {
+                const data = await tryFetch(makeProxy(target), timeout);
+                const result = data?.quoteResponse?.result?.[0];
+                if (result?.regularMarketPrice) return {
+                    symbol: result.symbol,
+                    regularMarketPrice: result.regularMarketPrice,
+                    regularMarketChangePercent: result.regularMarketChangePercent || 0,
+                    currency: result.currency || 'KRW',
+                    shortName: result.shortName || result.symbol,
+                };
+            } catch (e) {
+                console.warn(`v7 프록시 실패:`, e.message);
+            }
+        }
+        return null;
+    }
+
+    // Yahoo Finance v8 Chart API (폴백)
+    async function fetchChartV8(symbol, timeout = 7000) {
+        const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+        for (const makeProxy of PROXIES) {
+            try {
+                const data = await tryFetch(makeProxy(target), timeout);
+                const meta = data?.chart?.result?.[0]?.meta;
+                if (meta?.regularMarketPrice) {
+                    const prev = meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice;
+                    const changePct = ((meta.regularMarketPrice - prev) / prev) * 100;
+                    return {
+                        symbol: meta.symbol,
+                        regularMarketPrice: meta.regularMarketPrice,
+                        regularMarketChangePercent: changePct,
+                        currency: meta.currency || 'KRW',
+                        shortName: meta.symbol,
+                    };
+                }
+            } catch (e) {
+                console.warn(`v8 프록시 실패:`, e.message);
+            }
+        }
+        return null;
+    }
+
+    async function fetchStockData(symbol, timeout = 7000) {
+        // v7 먼저 시도 → 실패 시 v8 폴백
+        const result = await fetchQuoteV7(symbol, timeout) || await fetchChartV8(symbol, timeout);
+        if (!result) throw new Error(`${symbol} 데이터 로드 실패`);
+        return result;
     }
 
     async function searchStock() {
@@ -503,16 +543,14 @@
             if (!meta) throw new Error('종목을 찾을 수 없습니다.');
 
             const price = meta.regularMarketPrice;
-            const prevClose = meta.previousClose || meta.chartPreviousClose || price;
-            const changePercent = (((price - prevClose) / prevClose) * 100).toFixed(2);
+            const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
             const isUp = changePercent >= 0;
 
             const currency = meta.currency || 'KRW';
-            const currencyLabel = currency === 'KRW' ? '원' : currency;
             const priceStr = currency === 'KRW'
-                ? `${format(price.toFixed(0))}${currencyLabel}`
-                : `${currencyLabel} ${format(price.toFixed(2))}`;
-            const stockName = meta.longName || meta.shortName || meta.symbol;
+                ? `${format(price.toFixed(0))}원`
+                : `${currency} ${format(price.toFixed(2))}`;
+            const stockName = meta.shortName || meta.symbol;
 
             resultArea.innerHTML = `
                 <div class="comment-item" style="border: 2px solid var(--accent); background: rgba(0, 198, 255, 0.05); padding: 15px;">
@@ -549,21 +587,21 @@
         try {
             const meta = await fetchStockData(symbol);
             const price = meta.regularMarketPrice;
-            const prevClose = meta.previousClose || meta.chartPreviousClose || price;
-            
-            let changePercent = 0;
-            if (prevClose && prevClose !== 0) {
-                changePercent = (((price - prevClose) / prevClose) * 100).toFixed(2);
-            }
+            const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
             const isUp = changePercent >= 0;
+            const currency = meta.currency || 'KRW';
+            const priceStr = currency === 'KRW' ? `${format(price.toFixed(0))}원` : `${currency} ${format(price.toFixed(2))}`;
 
             if (type === 'recommend') {
-                document.getElementById('recommendStockName').innerText = symbol === '005930.KS' ? '삼성전자' : meta.symbol;
-                document.getElementById('recommendStockPrice').innerText = `${format(price.toFixed(0))}원`;
+                document.getElementById('recommendStockName').innerText = symbol === '005930.KS' ? '삼성전자' : (meta.shortName || meta.symbol);
+                document.getElementById('recommendStockPrice').innerText = priceStr;
                 document.getElementById('recommendStockChange').innerText = `${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%`;
                 document.getElementById('recommendStockChange').style.color = isUp ? '#ff4d4d' : '#4d94ff';
             }
-        } catch (e) { console.error('UpdateStockInfo Error:', e); }
+        } catch (e) {
+            document.getElementById('recommendStockPrice').innerText = '로드 실패';
+            console.error('UpdateStockInfo Error:', e);
+        }
     }
 
     async function loadPopularStocks() {
@@ -575,22 +613,18 @@
 
         try {
             const results = await Promise.allSettled(popularSymbols.map(s => fetchStockData(s)));
-            
+
             let html = '';
+            let successCount = 0;
             results.forEach((result, i) => {
+                const symbol = popularSymbols[i];
+                const name = names[symbol] || symbol;
                 if (result.status === 'fulfilled') {
+                    successCount++;
                     const meta = result.value;
-                    const symbol = popularSymbols[i];
                     const price = meta.regularMarketPrice;
-                    const prevClose = meta.previousClose || meta.chartPreviousClose || price; // 폴백 처리
-                    
-                    let changePercent = 0;
-                    if (prevClose && prevClose !== 0) {
-                        changePercent = (((price - prevClose) / prevClose) * 100).toFixed(2);
-                    }
-                    
+                    const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
                     const isUp = changePercent >= 0;
-                    const name = names[symbol] || symbol;
                     const currency = meta.currency || 'KRW';
                     const priceStr = currency === 'KRW'
                         ? `${format(price.toFixed(0))}원`
@@ -605,11 +639,27 @@
                             </div>
                         </div>
                     `;
+                } else {
+                    html += `
+                        <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; opacity:0.5;">
+                            <span style="font-weight:600; flex: 1;">${i+1}. ${name}</span>
+                            <span style="font-size:12px; color:var(--text-desc);">데이터 없음</span>
+                        </div>
+                    `;
                 }
             });
-            listContainer.innerHTML = html || '<div style="text-align:center; padding:10px;">데이터를 불러올 수 없습니다.</div>';
+
+            if (successCount === 0) {
+                listContainer.innerHTML = `
+                    <div style="text-align:center; padding:15px; color:var(--text-desc); font-size:13px; line-height:1.8;">
+                        ⚠️ 실시간 데이터를 불러올 수 없습니다.<br>
+                        <span style="font-size:12px;">장 마감 시간이거나 API 서버가 일시적으로 불안정합니다.<br>잠시 후 새로고침을 눌러주세요.</span>
+                    </div>`;
+            } else {
+                listContainer.innerHTML = html;
+            }
         } catch (e) {
-            listContainer.innerHTML = '<div style="text-align:center; padding:10px;">로딩 오류가 발생했습니다.</div>';
+            listContainer.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-desc);">로딩 오류 - 새로고침을 눌러주세요.</div>';
         }
     }
 
