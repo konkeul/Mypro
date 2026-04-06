@@ -238,6 +238,20 @@
         <div class="title" style="font-size: 22px;">📈 실시간 주식 정보</div>
         <div class="desc">국내외 주요 종목 시세를 실시간으로 확인하세요.</div>
         
+        <!-- 시장 지수 -->
+        <div style="display:flex; gap:10px; margin-top:20px; margin-bottom:5px;">
+            <div class="comment-item" style="flex:1; text-align:center; padding:14px 10px;">
+                <div style="font-size:11px; color:var(--text-desc); font-weight:600; letter-spacing:1px; margin-bottom:6px;">KOSPI</div>
+                <div id="kospiPrice" style="font-size:19px; font-weight:800;">--</div>
+                <div id="kospiChange" style="font-size:12px; margin-top:4px; color:var(--text-desc);">-</div>
+            </div>
+            <div class="comment-item" style="flex:1; text-align:center; padding:14px 10px;">
+                <div style="font-size:11px; color:var(--text-desc); font-weight:600; letter-spacing:1px; margin-bottom:6px;">KOSDAQ</div>
+                <div id="kosdaqPrice" style="font-size:19px; font-weight:800;">--</div>
+                <div id="kosdaqChange" style="font-size:12px; margin-top:4px; color:var(--text-desc);">-</div>
+            </div>
+        </div>
+
         <!-- 검색창 -->
         <div class="input-group" style="margin-top: 20px;">
             <div class="input-wrapper">
@@ -359,6 +373,7 @@
         // 주식 탭 첫 진입 시 데이터 로드
         if (tabId === 'stock' && !stockLoaded) {
             stockLoaded = true;
+            loadMarketIndex();
             loadPopularStocks();
             updateStockInfo('005930.KS', 'recommend');
         }
@@ -443,9 +458,9 @@
     // ================================================
     const TWELVEDATA_API_KEY = '40e8f04eaa854d5f87717b5d1977f13e';
 
-    // 한국 주식 조회 (Yahoo Finance v8 + allorigins.win)
+    // 한국 주식/지수 조회 (Yahoo Finance v8 + allorigins.win)
     async function fetchKoreanStock(yahooSymbol) {
-        const target = `https://query2.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=1d&range=1d`;
+        const target = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1d`;
         const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -625,11 +640,32 @@
         }
     }
 
+    async function loadMarketIndex() {
+        async function fetchIndex(symbol, priceId, changeId) {
+            try {
+                const meta = await fetchKoreanStock(symbol);
+                const price = meta.regularMarketPrice;
+                const changePct = parseFloat(meta.regularMarketChangePercent).toFixed(2);
+                const isUp = changePct >= 0;
+                const color = isUp ? '#ff4d4d' : '#4d94ff';
+                const arrow = isUp ? '▲' : '▼';
+                document.getElementById(priceId).innerText = price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                document.getElementById(changeId).innerHTML = `<span style="color:${color};font-weight:600;">${arrow} ${Math.abs(changePct)}%</span>`;
+            } catch (e) {
+                document.getElementById(priceId).innerText = '--';
+                document.getElementById(changeId).innerText = '오류';
+            }
+        }
+        fetchIndex('^KS11', 'kospiPrice', 'kospiChange');
+        fetchIndex('^KQ11', 'kosdaqPrice', 'kosdaqChange');
+    }
+
     async function refreshStocks() {
         const btn = document.getElementById('refreshBtn');
         btn.disabled = true;
         btn.innerText = '로딩 중...';
         await Promise.all([
+            loadMarketIndex(),
             loadPopularStocks(),
             updateStockInfo('005930.KS', 'recommend')
         ]);
