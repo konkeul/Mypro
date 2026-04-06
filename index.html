@@ -242,7 +242,7 @@
         <div class="input-group" style="margin-top: 20px;">
             <div class="input-wrapper">
                 <span class="currency-symbol">🔍</span>
-                <input type="text" id="stockSearch" class="calc-input" placeholder="종목명 또는 코드 입력" style="font-size: 16px; padding-left: 45px;">
+                <input type="text" id="stockSearch" class="calc-input" placeholder="종목명 또는 코드 입력" style="font-size: 16px; padding-left: 45px;" onkeydown="if(event.key==='Enter') searchStock()">
             </div>
             <button class="main-btn" style="margin-top: 10px; padding: 12px;" onclick="searchStock()">종목 검색</button>
         </div>
@@ -269,7 +269,10 @@
 
         <!-- 인기 종목 리스트 -->
         <div>
-            <label style="display: block; margin-bottom: 10px; font-weight: bold;">🔥 실시간 인기 종목</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <label style="font-weight: bold;">🔥 실시간 인기 종목</label>
+                <button onclick="refreshStocks()" id="refreshBtn" style="background:transparent; border:1px solid var(--accent); color:var(--accent); padding:5px 12px; border-radius:20px; font-size:12px; cursor:pointer;">↻ 새로고침</button>
+            </div>
             <div id="popularStocks" style="display: flex; flex-direction: column; gap: 10px;">
                 <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
                     <span>1. SK하이닉스</span>
@@ -339,14 +342,26 @@
     const format = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     const unformat = (s) => s.toString().replace(/,/g, '');
 
+    let stockLoaded = false;
+
     function handleRouting() {
         const hash = window.location.hash || '#calculator';
         const tabId = hash.substring(1);
-        
+
         document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === tabId));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'btn-' + tabId));
-        
-        if (!document.getElementById(tabId)) window.location.hash = '#calculator';
+
+        if (!document.getElementById(tabId)) {
+            window.location.hash = '#calculator';
+            return;
+        }
+
+        // 주식 탭 첫 진입 시 데이터 로드
+        if (tabId === 'stock' && !stockLoaded) {
+            stockLoaded = true;
+            loadPopularStocks();
+            updateStockInfo('005930.KS', 'recommend');
+        }
     }
 
     async function fetchRates() {
@@ -421,34 +436,38 @@
         else { elements.commentInput.value = ''; loadComments(); }
     }
 
-    // 공통 데이터 페치 함수 (프록시 변경 및 안정성 강화)
-    async function fetchStockData(symbol, timeout = 8000) {
-        // 더 안정적인 corsproxy.io 사용
-        const proxyUrl = 'https://corsproxy.io/?';
-        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-        
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
+    // 다중 프록시 폴백으로 Yahoo Finance 데이터 페치
+    const PROXIES = [
+        url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        url => `https://thingproxy.freeboard.io/fetch/${url}`,
+    ];
 
-        try {
-            const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), { 
-                signal: controller.signal,
-                headers: { 'Accept': 'application/json' }
-            });
-            clearTimeout(id);
-            
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
-            const data = await response.json();
-            if (!data || !data.chart || !data.chart.result || data.chart.result.length === 0) {
-                throw new Error('No data found for symbol: ' + symbol);
+    async function fetchWithProxy(targetUrl, timeout = 8000) {
+        for (const makeProxy of PROXIES) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(makeProxy(targetUrl), {
+                    signal: controller.signal,
+                    headers: { 'Accept': 'application/json' }
+                });
+                clearTimeout(id);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (!data?.chart?.result?.[0]) throw new Error('데이터 없음');
+                return data.chart.result[0].meta;
+            } catch (e) {
+                clearTimeout(id);
+                console.warn(`프록시 실패(${makeProxy(targetUrl).split('?')[0]}):`, e.message);
             }
-            return data.chart.result[0].meta;
-        } catch (e) {
-            clearTimeout(id);
-            console.error(`Fetch error for ${symbol}:`, e.message);
-            throw e;
         }
+        throw new Error('모든 프록시 연결 실패');
+    }
+
+    async function fetchStockData(symbol, timeout = 8000) {
+        const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+        return fetchWithProxy(targetUrl, timeout);
     }
 
     async function searchStock() {
@@ -488,15 +507,22 @@
             const changePercent = (((price - prevClose) / prevClose) * 100).toFixed(2);
             const isUp = changePercent >= 0;
 
+            const currency = meta.currency || 'KRW';
+            const currencyLabel = currency === 'KRW' ? '원' : currency;
+            const priceStr = currency === 'KRW'
+                ? `${format(price.toFixed(0))}${currencyLabel}`
+                : `${currencyLabel} ${format(price.toFixed(2))}`;
+            const stockName = meta.longName || meta.shortName || meta.symbol;
+
             resultArea.innerHTML = `
                 <div class="comment-item" style="border: 2px solid var(--accent); background: rgba(0, 198, 255, 0.05); padding: 15px;">
                     <div style="display:flex; justify-content:space-between; align-items: center;">
                         <div>
-                            <span style="font-weight:bold; font-size: 18px; color:var(--accent);">${meta.symbol}</span>
-                            <span style="font-size: 12px; color: var(--text-desc); margin-left: 5px;">실시간 검색 결과</span>
+                            <span style="font-weight:bold; font-size: 18px; color:var(--accent);">${meta.symbol}</span><br>
+                            <span style="font-size: 12px; color: var(--text-desc);">${stockName}</span>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-weight: bold; font-size: 18px;">${format(price.toFixed(0))}원</div>
+                            <div style="font-weight: bold; font-size: 18px;">${priceStr}</div>
                             <div style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: bold;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</div>
                         </div>
                     </div>
@@ -565,12 +591,16 @@
                     
                     const isUp = changePercent >= 0;
                     const name = names[symbol] || symbol;
+                    const currency = meta.currency || 'KRW';
+                    const priceStr = currency === 'KRW'
+                        ? `${format(price.toFixed(0))}원`
+                        : `${currency} ${format(price.toFixed(2))}`;
 
                     html += `
                         <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;">
                             <span style="font-weight:600; flex: 1;">${i+1}. ${name}</span>
                             <div style="text-align: right;">
-                                <span style="font-weight: 700; margin-right: 8px;">${format(price.toFixed(0))}원</span>
+                                <span style="font-weight: 700; margin-right: 8px;">${priceStr}</span>
                                 <span style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: 700; font-size: 13px;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</span>
                             </div>
                         </div>
@@ -581,6 +611,18 @@
         } catch (e) {
             listContainer.innerHTML = '<div style="text-align:center; padding:10px;">로딩 오류가 발생했습니다.</div>';
         }
+    }
+
+    async function refreshStocks() {
+        const btn = document.getElementById('refreshBtn');
+        btn.disabled = true;
+        btn.innerText = '로딩 중...';
+        await Promise.all([
+            loadPopularStocks(),
+            updateStockInfo('005930.KS', 'recommend')
+        ]);
+        btn.disabled = false;
+        btn.innerText = '↻ 새로고침';
     }
 
     function toggleTheme() {
@@ -613,8 +655,6 @@
         handleRouting();
         fetchRates();
         loadComments();
-        loadPopularStocks();
-        updateStockInfo('005930.KS', 'recommend');
         // 실시간 댓글 구독
         _supabase.channel('realtime-comments').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, loadComments).subscribe();
     };
