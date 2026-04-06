@@ -460,38 +460,54 @@
 
     // ================================================
     // 주식 API 설정
-    // 한국 주식: Yahoo Finance v8 + allorigins.win 프록시 (무료, 키 불필요)
-    // 미국 주식: Twelve Data (무료 키 필요 - twelvedata.com)
+    // 한국 주식: Yahoo Finance v8 + CORS 프록시 폴백 (무료, 키 불필요)
+    // 미국 주식: Twelve Data (무료 키)
     // ================================================
     const TWELVEDATA_API_KEY = '40e8f04eaa854d5f87717b5d1977f13e';
+    const CORS_PROXIES = [
+        t => `https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,
+        t => `https://corsproxy.io/?${encodeURIComponent(t)}`,
+    ];
 
-    // 한국 주식/지수 조회 (Yahoo Finance v8 + allorigins.win, 재시도 포함)
-    async function fetchKoreanStock(yahooSymbol, retries = 3) {
-        const target = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1d`;
-        const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
-        for (let attempt = 0; attempt < retries; attempt++) {
-            if (attempt > 0) await new Promise(r => setTimeout(r, 500 * attempt));
+    // CORS 프록시를 순서대로 시도해 JSON 반환
+    async function fetchViaProxy(targetUrl) {
+        let lastErr;
+        for (const proxy of CORS_PROXIES) {
             try {
-                const res = await fetch(url);
+                const res = await fetch(proxy(targetUrl));
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const text = await res.text();
                 if (!text || text.trim() === '') throw new Error('빈 응답');
-                const data = JSON.parse(text);
-                const meta = data?.chart?.result?.[0]?.meta;
-                if (!meta?.regularMarketPrice) throw new Error('데이터 없음');
-                const prev = meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice;
-                const changePct = ((meta.regularMarketPrice - prev) / prev) * 100;
-                return {
-                    symbol: yahooSymbol,
-                    regularMarketPrice: meta.regularMarketPrice,
-                    regularMarketChangePercent: changePct,
-                    currency: 'KRW',
-                    shortName: meta.shortName || yahooSymbol,
-                };
-            } catch (e) {
-                if (attempt === retries - 1) throw e;
-            }
+                return JSON.parse(text);
+            } catch (e) { lastErr = e; }
         }
+        throw lastErr;
+    }
+
+    // 한국 주식/지수 조회 (Yahoo Finance v8)
+    async function fetchKoreanStock(yahooSymbol) {
+        const target = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1d`;
+        const data = await fetchViaProxy(target);
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (!meta?.regularMarketPrice) throw new Error('데이터 없음');
+        const prev = meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice;
+        const changePct = ((meta.regularMarketPrice - prev) / prev) * 100;
+        return {
+            symbol: yahooSymbol,
+            regularMarketPrice: meta.regularMarketPrice,
+            regularMarketChangePercent: changePct,
+            currency: 'KRW',
+            shortName: meta.shortName || yahooSymbol,
+        };
+    }
+
+    // 한글 종목명으로 Yahoo Finance 검색 → 심볼 반환
+    async function searchKoreanSymbolByName(name) {
+        const target = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&lang=ko-KR&region=KR&quotesCount=10&newsCount=0&enableFuzzyQuery=false`;
+        const data = await fetchViaProxy(target);
+        const hit = (data?.quotes || []).find(q => q.symbol?.endsWith('.KS') || q.symbol?.endsWith('.KQ'));
+        if (!hit) throw new Error('국내 종목을 찾을 수 없습니다.');
+        return { symbol: hit.symbol, shortName: hit.shortname || hit.longname || name };
     }
 
     // 미국 주식 조회 (Twelve Data 직접 호출)
@@ -510,8 +526,16 @@
         };
     }
 
-    // 공통 인터페이스 - 6자리 코드면 한국, 아니면 미국
+    // 공통 인터페이스
+    // - 한글 이름 → Yahoo Finance 검색으로 심볼 조회 후 시세 조회
+    // - 6자리 숫자 코드 → .KS 우선, 실패 시 .KQ
+    // - 그 외 → 미국 주식 (Twelve Data)
     async function fetchStockData(symbol, isKorean = false) {
+        if (/[\uAC00-\uD7A3]/.test(symbol)) {
+            const { symbol: resolved, shortName } = await searchKoreanSymbolByName(symbol);
+            const meta = await fetchKoreanStock(resolved);
+            return { ...meta, shortName: shortName || meta.shortName };
+        }
         if (isKorean || /^\d{6}/.test(symbol)) {
             const code = symbol.replace(/\.(KS|KQ)$/, '');
             return fetchKoreanStock(`${code}.KS`).catch(() => fetchKoreanStock(`${code}.KQ`));
@@ -521,7 +545,8 @@
 
     async function searchStock() {
         const btn = document.getElementById('searchBtn');
-        const query = document.getElementById('stockSearch').value.trim().toUpperCase();
+        const rawQuery = document.getElementById('stockSearch').value.trim();
+        const query = /[\uAC00-\uD7A3]/.test(rawQuery) ? rawQuery : rawQuery.toUpperCase();
         const resultArea = document.getElementById('stockSearchResult');
 
         if (!query) return alert('검색할 종목명 또는 코드를 입력해주세요!');
