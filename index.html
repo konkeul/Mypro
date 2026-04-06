@@ -360,7 +360,7 @@
         if (tabId === 'stock' && !stockLoaded) {
             stockLoaded = true;
             loadPopularStocks();
-            updateStockInfo('005930.KS', 'recommend');
+            updateStockInfo('005930', 'recommend');
         }
     }
 
@@ -437,40 +437,42 @@
     }
 
     // ================================================
-    // Finnhub API 설정
-    // 무료 키 발급: https://finnhub.io → Sign up → Dashboard
+    // Twelve Data API 설정
+    // 무료 키 발급: https://twelvedata.com → Sign up → API Keys
+    // 무료: 하루 800회 / 분당 8회 (한국·미국 주식 모두 지원)
     // ================================================
-    const FINNHUB_API_KEY = 'YOUR_API_KEY_HERE';
+    const TWELVEDATA_API_KEY = 'YOUR_API_KEY_HERE';
 
-    async function fetchStockData(symbol) {
-        if (FINNHUB_API_KEY === 'YOUR_API_KEY_HERE') {
-            throw new Error('API 키 미설정');
-        }
-        const res = await fetch(
-            `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`
-        );
+    function isApiKeySet() {
+        return TWELVEDATA_API_KEY !== 'YOUR_API_KEY_HERE';
+    }
+
+    // 단일 종목 조회
+    async function fetchStockData(symbol, exchange = null) {
+        if (!isApiKeySet()) throw new Error('NO_KEY');
+        let url = `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${TWELVEDATA_API_KEY}`;
+        if (exchange) url += `&exchange=${exchange}`;
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        // c === 0 이면 해당 심볼 데이터 없음
-        if (!data.c || data.c === 0) throw new Error(`${symbol}: 데이터 없음`);
-        const isKorean = symbol.endsWith('.KS') || symbol.endsWith('.KQ');
+        if (data.status === 'error' || !data.close) throw new Error(data.message || '데이터 없음');
         return {
-            symbol,
-            regularMarketPrice: data.c,
-            regularMarketChangePercent: data.dp || 0,
-            currency: isKorean ? 'KRW' : 'USD',
-            shortName: symbol,
+            symbol: data.symbol,
+            regularMarketPrice: parseFloat(data.close),
+            regularMarketChangePercent: parseFloat(data.percent_change) || 0,
+            currency: data.currency || 'KRW',
+            shortName: data.name || data.symbol,
         };
     }
 
-    async function searchStockName(query) {
-        // Finnhub 심볼 검색으로 종목명 조회
-        const res = await fetch(
-            `https://finnhub.io/api/v1/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`
-        );
-        if (!res.ok) return null;
+    // 한국 인기 종목 일괄 조회 (1번의 API 호출로 5개 처리)
+    async function fetchKoreanBatch(symbols) {
+        const url = `https://api.twelvedata.com/quote?symbol=${symbols.join(',')}&exchange=KRX&apikey=${TWELVEDATA_API_KEY}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        return data?.result?.[0] || null;
+        // 단일 종목이면 객체 직접, 복수면 심볼을 키로 하는 객체
+        return symbols.length === 1 ? { [symbols[0]]: data } : data;
     }
 
     async function searchStock() {
@@ -487,26 +489,19 @@
         resultArea.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:14px;">🔎 데이터를 찾는 중...</div>';
 
         try {
-            if (FINNHUB_API_KEY === 'YOUR_API_KEY_HERE') {
-                throw new Error('NO_KEY');
-            }
+            if (!isApiKeySet()) throw new Error('NO_KEY');
 
             let meta = null;
             if (/^\d{6}$/.test(query)) {
-                // 한국 주식: KOSPI → KOSDAQ 순서로 시도
-                for (const s of [`${query}.KS`, `${query}.KQ`]) {
-                    try { meta = await fetchStockData(s); if (meta) break; }
-                    catch (e) { continue; }
-                }
+                // 한국 주식: KRX 거래소 지정
+                meta = await fetchStockData(query, 'KRX');
             } else {
+                // 미국 등 해외 주식: 티커 직접 입력
                 meta = await fetchStockData(query);
             }
 
             if (!meta) throw new Error('종목을 찾을 수 없습니다.');
-
-            // 종목명 조회 (검색 API 병렬 요청)
-            const nameInfo = await searchStockName(query).catch(() => null);
-            const stockName = nameInfo?.description || meta.symbol;
+            const stockName = meta.shortName || meta.symbol;
 
             const price = meta.regularMarketPrice;
             const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
@@ -552,8 +547,9 @@
     }
 
     async function updateStockInfo(symbol, type = 'recommend') {
+        if (!isApiKeySet()) return;
         try {
-            const meta = await fetchStockData(symbol);
+            const meta = await fetchStockData(symbol, 'KRX');
             const price = meta.regularMarketPrice;
             const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
             const isUp = changePercent >= 0;
@@ -561,7 +557,7 @@
             const priceStr = currency === 'KRW' ? `${format(price.toFixed(0))}원` : `${currency} ${format(price.toFixed(2))}`;
 
             if (type === 'recommend') {
-                document.getElementById('recommendStockName').innerText = symbol === '005930.KS' ? '삼성전자' : (meta.shortName || meta.symbol);
+                document.getElementById('recommendStockName').innerText = meta.shortName || symbol;
                 document.getElementById('recommendStockPrice').innerText = priceStr;
                 document.getElementById('recommendStockChange').innerText = `${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%`;
                 document.getElementById('recommendStockChange').style.color = isUp ? '#ff4d4d' : '#4d94ff';
@@ -573,14 +569,14 @@
     }
 
     async function loadPopularStocks() {
-        const popularSymbols = ['005930.KS', '000660.KS', '005380.KS', '035420.KS', '035720.KS'];
-        const names = {'005930.KS':'삼성전자', '000660.KS':'SK하이닉스', '005380.KS':'현대차', '035420.KS':'NAVER', '035720.KS':'카카오'};
+        const popularSymbols = ['005930', '000660', '005380', '035420', '035720'];
+        const names = {'005930':'삼성전자', '000660':'SK하이닉스', '005380':'현대차', '035420':'NAVER', '035720':'카카오'};
         const listContainer = document.getElementById('popularStocks');
-        
-        if (FINNHUB_API_KEY === 'YOUR_API_KEY_HERE') {
+
+        if (!isApiKeySet()) {
             listContainer.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:13px; line-height:1.8;">
                 ⚙️ API 키를 설정하면 실시간 데이터가 표시됩니다.<br>
-                <a href="https://finnhub.io" target="_blank" style="color:var(--accent);">finnhub.io</a>에서 무료로 발급 후 코드 내 FINNHUB_API_KEY에 입력하세요.
+                <a href="https://twelvedata.com" target="_blank" style="color:var(--accent);">twelvedata.com</a>에서 무료 발급 후 TWELVEDATA_API_KEY에 입력하세요.
             </div>`;
             return;
         }
@@ -588,52 +584,45 @@
         listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-desc);">🚀 실시간 데이터 불러오는 중...</div>';
 
         try {
-            const results = await Promise.allSettled(popularSymbols.map(s => fetchStockData(s)));
-
+            const batch = await fetchKoreanBatch(popularSymbols);
             let html = '';
             let successCount = 0;
-            results.forEach((result, i) => {
-                const symbol = popularSymbols[i];
+
+            popularSymbols.forEach((symbol, i) => {
                 const name = names[symbol] || symbol;
-                if (result.status === 'fulfilled') {
+                const item = batch[symbol];
+                if (item && item.close && item.status !== 'error') {
                     successCount++;
-                    const meta = result.value;
-                    const price = meta.regularMarketPrice;
-                    const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
+                    const price = parseFloat(item.close);
+                    const changePercent = parseFloat(item.percent_change || 0).toFixed(2);
                     const isUp = changePercent >= 0;
-                    const currency = meta.currency || 'KRW';
+                    const currency = item.currency || 'KRW';
                     const priceStr = currency === 'KRW'
                         ? `${format(price.toFixed(0))}원`
                         : `${currency} ${format(price.toFixed(2))}`;
 
                     html += `
-                        <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px;">
-                            <span style="font-weight:600; flex: 1;">${i+1}. ${name}</span>
-                            <div style="text-align: right;">
-                                <span style="font-weight: 700; margin-right: 8px;">${priceStr}</span>
-                                <span style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: 700; font-size: 13px;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</span>
+                        <div class="comment-item" style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px;">
+                            <span style="font-weight:600; flex:1;">${i+1}. ${name}</span>
+                            <div style="text-align:right;">
+                                <span style="font-weight:700; margin-right:8px;">${priceStr}</span>
+                                <span style="color:${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight:700; font-size:13px;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</span>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 } else {
                     html += `
-                        <div class="comment-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; opacity:0.5;">
-                            <span style="font-weight:600; flex: 1;">${i+1}. ${name}</span>
+                        <div class="comment-item" style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; opacity:0.5;">
+                            <span style="font-weight:600; flex:1;">${i+1}. ${name}</span>
                             <span style="font-size:12px; color:var(--text-desc);">데이터 없음</span>
-                        </div>
-                    `;
+                        </div>`;
                 }
             });
 
-            if (successCount === 0) {
-                listContainer.innerHTML = `
-                    <div style="text-align:center; padding:15px; color:var(--text-desc); font-size:13px; line-height:1.8;">
-                        ⚠️ 실시간 데이터를 불러올 수 없습니다.<br>
-                        <span style="font-size:12px;">장 마감 시간이거나 API 서버가 일시적으로 불안정합니다.<br>잠시 후 새로고침을 눌러주세요.</span>
-                    </div>`;
-            } else {
-                listContainer.innerHTML = html;
-            }
+            listContainer.innerHTML = successCount > 0 ? html
+                : `<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:13px; line-height:1.8;">
+                    ⚠️ 데이터를 불러올 수 없습니다.<br>
+                    <span style="font-size:12px;">장 마감 시간이거나 API 한도 초과일 수 있습니다.</span>
+                   </div>`;
         } catch (e) {
             listContainer.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-desc);">로딩 오류 - 새로고침을 눌러주세요.</div>';
         }
