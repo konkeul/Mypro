@@ -431,8 +431,7 @@
                 const meta = data?.chart?.result?.[0]?.meta;
                 if (!meta?.regularMarketPrice) throw new Error('데이터 없음');
                 const price = meta.regularMarketPrice;
-                const prev = meta.previousClose || meta.chartPreviousClose || price;
-                const changePct = ((price - prev) / prev) * 100;
+                const changePct = meta.regularMarketChangePercent ?? 0;
                 const pct = Math.abs(changePct).toFixed(2);
                 const isUp = changePct >= 0;
                 document.getElementById(priceId).innerText = price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
