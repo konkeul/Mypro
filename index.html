@@ -404,24 +404,34 @@
     // 주식 API - 네이버 금융 지수 (직접 → CORS 프록시 폴백)
     // ================================================
     const CORS_PROXIES = [
-        u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-        u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        t => `https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,
+        t => `https://thingproxy.freeboard.io/fetch/${t}`,
+        t => `https://cors-anywhere.herokuapp.com/${t}`
     ];
 
     async function fetchJson(url) {
+        // 1. 직접 시도 (가끔 프록시 없이도 될 때가 있음)
         try {
             const res = await fetch(url);
             if (res.ok) return await res.json();
         } catch (e) {}
+
+        // 2. 프록시 순회
         let lastErr;
         for (const proxy of CORS_PROXIES) {
             try {
-                const res = await fetch(proxy(url));
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return JSON.parse(await res.text());
-            } catch (e) { lastErr = e; }
+                const proxyUrl = proxy(url);
+                const res = await fetch(proxyUrl);
+                if (!res.ok) continue; // 다음 프록시로
+                const text = await res.text();
+                if (!text) continue;
+                return JSON.parse(text);
+            } catch (e) { 
+                console.warn(`Proxy fail: ${url}`, e);
+                lastErr = e; 
+            }
         }
-        throw lastErr || new Error('데이터 불러오기 실패');
+        throw lastErr || new Error('All proxies failed');
     }
 
     async function loadMarketIndex() {
@@ -430,8 +440,10 @@
             try {
                 const url = `https://m.stock.naver.com/api/index/${naverCode}/basic`;
                 const data = await fetchJson(url);
-                const price = parseFloat(String(data.closePrice || '0').replace(/,/g, ''));
-                const changePct = parseFloat(data.fluctuationsRatio) || 0;
+                // 다양한 필드명 대응 (closePrice/now, fluctuationsRatio/rate/fluctuationsRatio)
+                const priceStr = data.now || data.closePrice || '0';
+                const price = parseFloat(String(priceStr).replace(/,/g, ''));
+                const changePct = parseFloat(data.rate || data.fluctuationsRatio || 0);
                 const pct = changePct.toFixed(2);
                 const isUp = changePct >= 0;
                 const color = isUp ? '#ff4d4d' : '#4d94ff';
