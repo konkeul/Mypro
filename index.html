@@ -428,7 +428,10 @@
         async function fetchIndex(naverCode, priceId, changeId) {
             document.getElementById(priceId).innerText = '...';
             try {
-                const { price, changePct } = await fetchNaverIndex(naverCode);
+                const url = `https://m.stock.naver.com/api/index/${naverCode}/basic`;
+                const data = await fetchJson(url);
+                const price = parseFloat(String(data.closePrice || '0').replace(/,/g, ''));
+                const changePct = parseFloat(data.fluctuationsRatio) || 0;
                 const pct = changePct.toFixed(2);
                 const isUp = changePct >= 0;
                 const color = isUp ? '#ff4d4d' : '#4d94ff';
