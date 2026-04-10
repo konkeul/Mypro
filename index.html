@@ -413,74 +413,50 @@
 
     // ================================================
     // 주식 API 설정
-    // 한국 주식: Yahoo Finance v8 + CORS 프록시 폴백 (무료, 키 불필요)
+    // 한국 주식: 네이버 금융 API (직접 호출, 키 불필요)
     // 미국 주식: Twelve Data (무료 키)
     // ================================================
     const TWELVEDATA_API_KEY = '40e8f04eaa854d5f87717b5d1977f13e';
-    const CORS_PROXIES = [
-        t => `https://corsproxy.io/?${encodeURIComponent(t)}`,
-        t => `https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,
-        t => `https://thingproxy.freeboard.io/fetch/${t}`,
-        t => `https://corsproxy.io/?url=${encodeURIComponent(t)}`,
-    ];
 
-    // CORS 프록시를 순서대로 시도해 JSON 반환
-    async function fetchViaProxy(targetUrl) {
-        let lastErr;
-        for (const proxy of CORS_PROXIES) {
-            try {
-                const fullUrl = proxy(targetUrl);
-                const res = await fetch(fullUrl);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const text = await res.text();
-                if (!text || text.trim() === '') throw new Error('빈 응답');
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    throw new Error('JSON 파싱 실패');
-                }
-            } catch (e) { 
-                console.warn(`Proxy failed: ${e.message}`);
-                lastErr = e; 
-            }
-        }
-        throw lastErr;
+    // 네이버 금융 - 한글/코드 종목 검색 (자동완성 API, CORS 허용)
+    async function searchNaverStock(query) {
+        const url = `https://ac.stock.naver.com/ac?q=${encodeURIComponent(query)}&target=stock`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const items = data?.items || [];
+        if (!items.length) throw new Error('종목을 찾을 수 없습니다.');
+        // items[i] = [종목명, 종목코드, 타입, ...]
+        return { code: items[0][1], name: items[0][0] };
     }
 
-    // 한국 주식/지수 조회 (Yahoo Finance v8)
-    async function fetchKoreanStock(yahooSymbol) {
-        const target = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1d`;
-        const data = await fetchViaProxy(target);
-        const meta = data?.chart?.result?.[0]?.meta;
-        if (!meta?.regularMarketPrice) throw new Error('데이터 없음');
-        const prev = meta.previousClose || meta.chartPreviousClose || meta.regularMarketPrice;
-        const changePct = ((meta.regularMarketPrice - prev) / prev) * 100;
+    // 네이버 금융 - 종목 시세 조회
+    async function fetchNaverStock(code) {
+        const url = `https://m.stock.naver.com/api/stock/${code}/basic`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data?.closePrice) throw new Error('데이터 없음');
+        const price = parseFloat(String(data.closePrice).replace(/,/g, ''));
+        const changePct = parseFloat(data.fluctuationsRatio) || 0;
         return {
-            symbol: yahooSymbol,
-            regularMarketPrice: meta.regularMarketPrice,
+            symbol: code,
+            regularMarketPrice: price,
             regularMarketChangePercent: changePct,
             currency: 'KRW',
-            shortName: meta.shortName || yahooSymbol,
+            shortName: data.stockName || code,
         };
     }
 
-    // 한글 종목명으로 Yahoo Finance 검색 → 심볼 반환
-    async function searchKoreanSymbolByName(name) {
-        const queries = [
-            `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&lang=ko-KR&region=KR&quotesCount=10&newsCount=0&enableFuzzyQuery=true`,
-            `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&lang=ko-KR&region=KR&quotesCount=10&newsCount=0&enableFuzzyQuery=true`,
-            `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&quotesCount=10&newsCount=0&enableFuzzyQuery=true`,
-        ];
-        let lastErr;
-        for (const target of queries) {
-            try {
-                const data = await fetchViaProxy(target);
-                const quotes = data?.quotes || [];
-                const hit = quotes.find(q => q.symbol?.endsWith('.KS') || q.symbol?.endsWith('.KQ'));
-                if (hit) return { symbol: hit.symbol, shortName: hit.shortname || hit.longname || name };
-            } catch (e) { lastErr = e; }
-        }
-        throw lastErr || new Error('국내 종목을 찾을 수 없습니다.');
+    // 네이버 금융 - 지수 조회 (KOSPI / KOSDAQ)
+    async function fetchNaverIndex(indexCode) {
+        const url = `https://m.stock.naver.com/api/index/${indexCode}/basic`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const price = parseFloat(String(data.closePrice || '0').replace(/,/g, ''));
+        const changePct = parseFloat(data.fluctuationsRatio) || 0;
+        return { price, changePct };
     }
 
     // 미국 주식 조회 (Twelve Data 직접 호출)
@@ -500,18 +476,17 @@
     }
 
     // 공통 인터페이스
-    // - 한글 이름 → Yahoo Finance 검색으로 심볼 조회 후 시세 조회
-    // - 6자리 숫자 코드 → .KS 우선, 실패 시 .KQ
+    // - 한글 이름 → 네이버 자동완성으로 코드 조회 후 시세 조회
+    // - 6자리 숫자 코드 → 네이버 시세 직접 조회
     // - 그 외 → 미국 주식 (Twelve Data)
     async function fetchStockData(symbol, isKorean = false) {
         if (/[\uAC00-\uD7A3]/.test(symbol)) {
-            const { symbol: resolved, shortName } = await searchKoreanSymbolByName(symbol);
-            const meta = await fetchKoreanStock(resolved);
-            return { ...meta, shortName: shortName || meta.shortName };
+            const { code, name } = await searchNaverStock(symbol);
+            const meta = await fetchNaverStock(code);
+            return { ...meta, shortName: name || meta.shortName };
         }
-        if (isKorean || /^\d{6}/.test(symbol)) {
-            const code = symbol.replace(/\.(KS|KQ)$/, '');
-            return fetchKoreanStock(`${code}.KS`).catch(() => fetchKoreanStock(`${code}.KQ`));
+        if (isKorean || /^\d{6}$/.test(symbol)) {
+            return fetchNaverStock(symbol);
         }
         return fetchUsStock(symbol);
     }
