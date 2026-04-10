@@ -413,17 +413,36 @@
 
     // ================================================
     // 주식 API 설정
-    // 한국 주식: 네이버 금융 API (직접 호출, 키 불필요)
+    // 한국 주식: 네이버 금융 API (직접 시도 → CORS 프록시 폴백)
     // 미국 주식: Twelve Data (무료 키)
     // ================================================
     const TWELVEDATA_API_KEY = '40e8f04eaa854d5f87717b5d1977f13e';
+    const CORS_PROXIES = [
+        u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+        u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    ];
 
-    // 네이버 금융 - 한글/코드 종목 검색 (자동완성 API, CORS 허용)
+    // 직접 호출 후 실패 시 CORS 프록시 순서대로 시도
+    async function fetchJson(url) {
+        try {
+            const res = await fetch(url);
+            if (res.ok) return await res.json();
+        } catch (e) {}
+        let lastErr;
+        for (const proxy of CORS_PROXIES) {
+            try {
+                const res = await fetch(proxy(url));
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return JSON.parse(await res.text());
+            } catch (e) { lastErr = e; }
+        }
+        throw lastErr || new Error('데이터 불러오기 실패');
+    }
+
+    // 네이버 금융 - 한글/코드 종목 검색 (자동완성 API)
     async function searchNaverStock(query) {
         const url = `https://ac.stock.naver.com/ac?q=${encodeURIComponent(query)}&target=stock`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await fetchJson(url);
         const items = data?.items || [];
         if (!items.length) throw new Error('종목을 찾을 수 없습니다.');
         // items[i] = [종목명, 종목코드, 타입, ...]
@@ -433,9 +452,7 @@
     // 네이버 금융 - 종목 시세 조회
     async function fetchNaverStock(code) {
         const url = `https://m.stock.naver.com/api/stock/${code}/basic`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await fetchJson(url);
         if (!data?.closePrice) throw new Error('데이터 없음');
         const price = parseFloat(String(data.closePrice).replace(/,/g, ''));
         const changePct = parseFloat(data.fluctuationsRatio) || 0;
@@ -451,9 +468,7 @@
     // 네이버 금융 - 지수 조회 (KOSPI / KOSDAQ)
     async function fetchNaverIndex(indexCode) {
         const url = `https://m.stock.naver.com/api/index/${indexCode}/basic`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await fetchJson(url);
         const price = parseFloat(String(data.closePrice || '0').replace(/,/g, ''));
         const changePct = parseFloat(data.fluctuationsRatio) || 0;
         return { price, changePct };
