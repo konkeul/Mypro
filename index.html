@@ -401,17 +401,13 @@
     }
 
     // ================================================
-    // 주식 API 설정
-    // 한국 주식: 네이버 금융 API (직접 시도 → CORS 프록시 폴백)
-    // 미국 주식: Twelve Data (무료 키)
+    // 주식 API - 네이버 금융 지수 (직접 → CORS 프록시 폴백)
     // ================================================
-    const TWELVEDATA_API_KEY = '40e8f04eaa854d5f87717b5d1977f13e';
     const CORS_PROXIES = [
         u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
         u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     ];
 
-    // 직접 호출 후 실패 시 CORS 프록시 순서대로 시도
     async function fetchJson(url) {
         try {
             const res = await fetch(url);
@@ -426,135 +422,6 @@
             } catch (e) { lastErr = e; }
         }
         throw lastErr || new Error('데이터 불러오기 실패');
-    }
-
-    // 네이버 금융 - 한글/코드 종목 검색 (자동완성 API)
-    async function searchNaverStock(query) {
-        const url = `https://ac.stock.naver.com/ac?q=${encodeURIComponent(query)}&target=stock`;
-        const data = await fetchJson(url);
-        const items = data?.items || [];
-        if (!items.length) throw new Error('종목을 찾을 수 없습니다.');
-        // items[i] = [종목명, 종목코드, 타입, ...]
-        return { code: items[0][1], name: items[0][0] };
-    }
-
-    // 네이버 금융 - 종목 시세 조회
-    async function fetchNaverStock(code) {
-        const url = `https://m.stock.naver.com/api/stock/${code}/basic`;
-        const data = await fetchJson(url);
-        if (!data?.closePrice) throw new Error('데이터 없음');
-        const price = parseFloat(String(data.closePrice).replace(/,/g, ''));
-        const changePct = parseFloat(data.fluctuationsRatio) || 0;
-        return {
-            symbol: code,
-            regularMarketPrice: price,
-            regularMarketChangePercent: changePct,
-            currency: 'KRW',
-            shortName: data.stockName || code,
-        };
-    }
-
-    // 네이버 금융 - 지수 조회 (KOSPI / KOSDAQ)
-    async function fetchNaverIndex(indexCode) {
-        const url = `https://m.stock.naver.com/api/index/${indexCode}/basic`;
-        const data = await fetchJson(url);
-        const price = parseFloat(String(data.closePrice || '0').replace(/,/g, ''));
-        const changePct = parseFloat(data.fluctuationsRatio) || 0;
-        return { price, changePct };
-    }
-
-    // 미국 주식 조회 (Twelve Data 직접 호출)
-    async function fetchUsStock(symbol) {
-        const url = `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${TWELVEDATA_API_KEY}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (data.status === 'error' || !data.close) throw new Error(data.message || '데이터 없음');
-        return {
-            symbol: data.symbol,
-            regularMarketPrice: parseFloat(data.close),
-            regularMarketChangePercent: parseFloat(data.percent_change) || 0,
-            currency: data.currency || 'USD',
-            shortName: data.name || data.symbol,
-        };
-    }
-
-    // 공통 인터페이스
-    // - 한글 이름 → 네이버 자동완성으로 코드 조회 후 시세 조회
-    // - 6자리 숫자 코드 → 네이버 시세 직접 조회
-    // - 그 외 → 미국 주식 (Twelve Data)
-    async function fetchStockData(symbol, isKorean = false) {
-        if (/[\uAC00-\uD7A3]/.test(symbol)) {
-            const { code, name } = await searchNaverStock(symbol);
-            const meta = await fetchNaverStock(code);
-            return { ...meta, shortName: name || meta.shortName };
-        }
-        if (isKorean || /^\d{6}$/.test(symbol)) {
-            return fetchNaverStock(symbol);
-        }
-        return fetchUsStock(symbol);
-    }
-
-    async function searchStock() {
-        const btn = document.getElementById('searchBtn');
-        const rawQuery = document.getElementById('stockSearch').value.trim();
-        const query = /[\uAC00-\uD7A3]/.test(rawQuery) ? rawQuery : rawQuery.toUpperCase();
-        const resultArea = document.getElementById('stockSearchResult');
-
-        if (!query) return alert('검색할 종목명 또는 코드를 입력해주세요!');
-
-        const originalText = btn.innerText;
-        btn.innerText = '검색 중...';
-        btn.disabled = true;
-        resultArea.style.display = 'block';
-        resultArea.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-desc); font-size:14px;">🔎 데이터를 찾는 중...</div>';
-
-        try {
-            const meta = await fetchStockData(query, /^\d{6}$/.test(query));
-            if (!meta) throw new Error('종목을 찾을 수 없습니다.');
-            const stockName = meta.shortName || meta.symbol;
-
-            const price = meta.regularMarketPrice;
-            const changePercent = parseFloat(meta.regularMarketChangePercent).toFixed(2);
-            const isUp = changePercent >= 0;
-
-            const currency = meta.currency || 'KRW';
-            const priceStr = currency === 'KRW'
-                ? `${format(price.toFixed(0))}원`
-                : `${currency} ${format(price.toFixed(2))}`;
-
-            resultArea.innerHTML = `
-                <div class="comment-item" style="border: 2px solid var(--accent); background: rgba(0, 198, 255, 0.05); padding: 15px;">
-                    <div style="display:flex; justify-content:space-between; align-items: center;">
-                        <div>
-                            <span style="font-weight:bold; font-size: 18px; color:var(--accent);">${meta.symbol}</span><br>
-                            <span style="font-size: 12px; color: var(--text-desc);">${stockName}</span>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: bold; font-size: 18px;">${priceStr}</div>
-                            <div style="color: ${isUp ? '#ff4d4d' : '#4d94ff'}; font-weight: bold;">${isUp ? '▲' : '▼'} ${Math.abs(changePercent)}%</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } catch (e) {
-            const isNoKey = e.message === 'NO_KEY';
-            resultArea.innerHTML = `
-                <div class="comment-item" style="border: 1px solid #ff4d4d; background: rgba(255, 77, 77, 0.05); padding: 15px;">
-                    <div style="color: #ff4d4d; font-weight: bold; margin-bottom: 8px;">
-                        ${isNoKey ? '⚙️ API 키를 설정해주세요.' : '❌ 검색 결과가 없습니다.'}
-                    </div>
-                    <div style="font-size: 13px; color: var(--text-desc); line-height: 1.6;">
-                        ${isNoKey
-                            ? 'index.html 내 <b>FINNHUB_API_KEY</b> 값을 발급받은 키로 교체하세요.<br>무료 발급: <a href="https://finnhub.io" target="_blank" style="color:var(--accent);">finnhub.io</a>'
-                            : '• 한국 주식: 종목코드 6자리 입력 (예: 005930)<br>• 미국 주식: 티커 입력 (예: AAPL, TSLA)<br>• 종목코드를 정확히 입력했는지 확인해주세요.'}
-                    </div>
-                </div>
-            `;
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
     }
 
     async function loadMarketIndex() {
