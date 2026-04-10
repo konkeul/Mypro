@@ -420,6 +420,8 @@
     const CORS_PROXIES = [
         t => `https://corsproxy.io/?${encodeURIComponent(t)}`,
         t => `https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,
+        t => `https://thingproxy.freeboard.io/fetch/${t}`,
+        t => `https://corsproxy.io/?url=${encodeURIComponent(t)}`,
     ];
 
     // CORS 프록시를 순서대로 시도해 JSON 반환
@@ -464,11 +466,21 @@
 
     // 한글 종목명으로 Yahoo Finance 검색 → 심볼 반환
     async function searchKoreanSymbolByName(name) {
-        const target = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&lang=ko-KR&region=KR&quotesCount=10&newsCount=0&enableFuzzyQuery=false`;
-        const data = await fetchViaProxy(target);
-        const hit = (data?.quotes || []).find(q => q.symbol?.endsWith('.KS') || q.symbol?.endsWith('.KQ'));
-        if (!hit) throw new Error('국내 종목을 찾을 수 없습니다.');
-        return { symbol: hit.symbol, shortName: hit.shortname || hit.longname || name };
+        const queries = [
+            `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&lang=ko-KR&region=KR&quotesCount=10&newsCount=0&enableFuzzyQuery=true`,
+            `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&lang=ko-KR&region=KR&quotesCount=10&newsCount=0&enableFuzzyQuery=true`,
+            `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&quotesCount=10&newsCount=0&enableFuzzyQuery=true`,
+        ];
+        let lastErr;
+        for (const target of queries) {
+            try {
+                const data = await fetchViaProxy(target);
+                const quotes = data?.quotes || [];
+                const hit = quotes.find(q => q.symbol?.endsWith('.KS') || q.symbol?.endsWith('.KQ'));
+                if (hit) return { symbol: hit.symbol, shortName: hit.shortname || hit.longname || name };
+            } catch (e) { lastErr = e; }
+        }
+        throw lastErr || new Error('국내 종목을 찾을 수 없습니다.');
     }
 
     // 미국 주식 조회 (Twelve Data 직접 호출)
