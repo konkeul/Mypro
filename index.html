@@ -404,13 +404,12 @@
     // 주식 API - 네이버 금융 지수 (직접 → CORS 프록시 폴백)
     // ================================================
     const CORS_PROXIES = [
-        t => `https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,
-        t => `https://thingproxy.freeboard.io/fetch/${t}`,
-        t => `https://cors-anywhere.herokuapp.com/${t}`
+        t => `https://api.allorigins.win/get?url=${encodeURIComponent(t)}`,
+        t => `https://thingproxy.freeboard.io/fetch/${t}`
     ];
 
     async function fetchJson(url) {
-        // 1. 직접 시도 (가끔 프록시 없이도 될 때가 있음)
+        // 1. 직접 시도
         try {
             const res = await fetch(url);
             if (res.ok) return await res.json();
@@ -422,10 +421,18 @@
             try {
                 const proxyUrl = proxy(url);
                 const res = await fetch(proxyUrl);
-                if (!res.ok) continue; // 다음 프록시로
-                const text = await res.text();
-                if (!text) continue;
-                return JSON.parse(text);
+                if (!res.ok) continue;
+                const data = await res.json();
+                
+                // allorigins.win 특유의 응답 구조 처리
+                if (data && data.contents) {
+                    try {
+                        return JSON.parse(data.contents);
+                    } catch (e) {
+                        return data.contents; // JSON이 아니면 그대로 반환
+                    }
+                }
+                return data;
             } catch (e) { 
                 console.warn(`Proxy fail: ${url}`, e);
                 lastErr = e; 
@@ -435,28 +442,34 @@
     }
 
     async function loadMarketIndex() {
-        async function fetchIndex(naverCode, priceId, changeId) {
+        async function fetchIndex(symbol, priceId, changeId) {
             document.getElementById(priceId).innerText = '...';
             try {
-                const url = `https://m.stock.naver.com/api/index/${naverCode}/basic`;
-                const data = await fetchJson(url);
-                // 다양한 필드명 대응 (closePrice/now, fluctuationsRatio/rate/fluctuationsRatio)
-                const priceStr = data.now || data.closePrice || '0';
-                const price = parseFloat(String(priceStr).replace(/,/g, ''));
-                const changePct = parseFloat(data.rate || data.fluctuationsRatio || 0);
+                // Yahoo Finance API 사용 (네이버보다 프록시 허용 범위가 넓음)
+                const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
+                const data = await fetchJson(target);
+                const meta = data?.chart?.result?.[0]?.meta;
+                if (!meta) throw new Error('데이터 없음');
+
+                const price = meta.regularMarketPrice;
+                const prev = meta.previousClose || meta.chartPreviousClose || price;
+                const changePct = ((price - prev) / prev) * 100;
+                
                 const pct = changePct.toFixed(2);
                 const isUp = changePct >= 0;
                 const color = isUp ? '#ff4d4d' : '#4d94ff';
                 const arrow = isUp ? '▲' : '▼';
+
                 document.getElementById(priceId).innerText = price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 document.getElementById(changeId).innerHTML = `<span style="color:${color};font-weight:600;">${arrow} ${Math.abs(pct)}%</span>`;
             } catch (e) {
+                console.error(`Index Error (${symbol}):`, e);
                 document.getElementById(priceId).innerText = '--';
                 document.getElementById(changeId).innerText = '오류';
             }
         }
-        fetchIndex('KOSPI', 'kospiPrice', 'kospiChange');
-        fetchIndex('KOSDAQ', 'kosdaqPrice', 'kosdaqChange');
+        fetchIndex('^KS11', 'kospiPrice', 'kospiChange');
+        fetchIndex('^KQ11', 'kosdaqPrice', 'kosdaqChange');
     }
 
     function toggleTheme() {
