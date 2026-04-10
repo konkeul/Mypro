@@ -418,8 +418,8 @@
     // ================================================
     const TWELVEDATA_API_KEY = '40e8f04eaa854d5f87717b5d1977f13e';
     const CORS_PROXIES = [
-        t => `https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,
         t => `https://corsproxy.io/?${encodeURIComponent(t)}`,
+        t => `https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,
     ];
 
     // CORS 프록시를 순서대로 시도해 JSON 반환
@@ -427,12 +427,20 @@
         let lastErr;
         for (const proxy of CORS_PROXIES) {
             try {
-                const res = await fetch(proxy(targetUrl));
+                const fullUrl = proxy(targetUrl);
+                const res = await fetch(fullUrl);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const text = await res.text();
                 if (!text || text.trim() === '') throw new Error('빈 응답');
-                return JSON.parse(text);
-            } catch (e) { lastErr = e; }
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    throw new Error('JSON 파싱 실패');
+                }
+            } catch (e) { 
+                console.warn(`Proxy failed: ${e.message}`);
+                lastErr = e; 
+            }
         }
         throw lastErr;
     }
