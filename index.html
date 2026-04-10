@@ -401,69 +401,43 @@
     }
 
     // ================================================
-    // 주식 API - 네이버 금융 지수 (직접 → CORS 프록시 폴백)
+    // 주식 지수 - Yahoo Finance (CORS 프록시 경유)
+    // 모든 프록시가 raw JSON을 그대로 반환하는 방식만 사용
     // ================================================
     const CORS_PROXIES = [
-        t => `https://api.allorigins.win/get?url=${encodeURIComponent(t)}`,
-        t => `https://thingproxy.freeboard.io/fetch/${t}`
+        u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+        u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
     ];
 
     async function fetchJson(url) {
-        // 1. 직접 시도
-        try {
-            const res = await fetch(url);
-            if (res.ok) return await res.json();
-        } catch (e) {}
-
-        // 2. 프록시 순회
-        let lastErr;
         for (const proxy of CORS_PROXIES) {
             try {
-                const proxyUrl = proxy(url);
-                const res = await fetch(proxyUrl);
+                const res = await fetch(proxy(url), { signal: AbortSignal.timeout(8000) });
                 if (!res.ok) continue;
-                const data = await res.json();
-                
-                // allorigins.win 특유의 응답 구조 처리
-                if (data && data.contents) {
-                    try {
-                        return JSON.parse(data.contents);
-                    } catch (e) {
-                        return data.contents; // JSON이 아니면 그대로 반환
-                    }
-                }
-                return data;
-            } catch (e) { 
-                console.warn(`Proxy fail: ${url}`, e);
-                lastErr = e; 
-            }
+                const text = await res.text();
+                if (text) return JSON.parse(text);
+            } catch (e) {}
         }
-        throw lastErr || new Error('All proxies failed');
+        throw new Error('데이터 불러오기 실패');
     }
 
     async function loadMarketIndex() {
         async function fetchIndex(symbol, priceId, changeId) {
             document.getElementById(priceId).innerText = '...';
             try {
-                // Yahoo Finance API 사용 (네이버보다 프록시 허용 범위가 넓음)
-                const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-                const data = await fetchJson(target);
+                const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+                const data = await fetchJson(url);
                 const meta = data?.chart?.result?.[0]?.meta;
-                if (!meta) throw new Error('데이터 없음');
-
+                if (!meta?.regularMarketPrice) throw new Error('데이터 없음');
                 const price = meta.regularMarketPrice;
                 const prev = meta.previousClose || meta.chartPreviousClose || price;
                 const changePct = ((price - prev) / prev) * 100;
-                
-                const pct = changePct.toFixed(2);
+                const pct = Math.abs(changePct).toFixed(2);
                 const isUp = changePct >= 0;
-                const color = isUp ? '#ff4d4d' : '#4d94ff';
-                const arrow = isUp ? '▲' : '▼';
-
                 document.getElementById(priceId).innerText = price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                document.getElementById(changeId).innerHTML = `<span style="color:${color};font-weight:600;">${arrow} ${Math.abs(pct)}%</span>`;
+                document.getElementById(changeId).innerHTML = `<span style="color:${isUp ? '#ff4d4d' : '#4d94ff'};font-weight:600;">${isUp ? '▲' : '▼'} ${pct}%</span>`;
             } catch (e) {
-                console.error(`Index Error (${symbol}):`, e);
                 document.getElementById(priceId).innerText = '--';
                 document.getElementById(changeId).innerText = '오류';
             }
