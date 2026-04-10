@@ -554,24 +554,23 @@
     }
 
     async function loadMarketIndex() {
-        async function fetchIndex(symbol, priceId, changeId) {
+        async function fetchIndex(naverCode, priceId, changeId) {
             document.getElementById(priceId).innerText = '...';
             try {
-                const meta = await fetchKoreanStock(symbol);
-                const price = meta.regularMarketPrice;
-                const changePct = parseFloat(meta.regularMarketChangePercent).toFixed(2);
+                const { price, changePct } = await fetchNaverIndex(naverCode);
+                const pct = changePct.toFixed(2);
                 const isUp = changePct >= 0;
                 const color = isUp ? '#ff4d4d' : '#4d94ff';
                 const arrow = isUp ? '▲' : '▼';
                 document.getElementById(priceId).innerText = price.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                document.getElementById(changeId).innerHTML = `<span style="color:${color};font-weight:600;">${arrow} ${Math.abs(changePct)}%</span>`;
+                document.getElementById(changeId).innerHTML = `<span style="color:${color};font-weight:600;">${arrow} ${Math.abs(pct)}%</span>`;
             } catch (e) {
                 document.getElementById(priceId).innerText = '--';
                 document.getElementById(changeId).innerText = '오류';
             }
         }
-        fetchIndex('^KS11', 'kospiPrice', 'kospiChange');
-        fetchIndex('^KQ11', 'kosdaqPrice', 'kosdaqChange');
+        fetchIndex('KOSPI', 'kospiPrice', 'kospiChange');
+        fetchIndex('KOSDAQ', 'kosdaqPrice', 'kosdaqChange');
     }
 
     function toggleTheme() {
